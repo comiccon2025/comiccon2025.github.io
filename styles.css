@@ -4,15 +4,40 @@
   box-sizing: border-box;
 }
 
-html,
-body {
+html, body {
   margin: 0;
   padding: 0;
   height: 100%;
+
   font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
   color: #e5e7eb;
-  background: radial-gradient(circle at top, #020617 0, #020617 40%, #000 100%);
+
+  /* Базовый тёмный фон */
+  background-color: #020617;
+
+  /* 1) радиальный градиент сверху
+     2–3) лёгкая цифровая сетка */
+  background-image:
+    radial-gradient(circle at top, #020617 0, #020617 45%, #000 100%),
+    linear-gradient(
+      rgba(30, 64, 175, 0.35) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(30, 64, 175, 0.28) 1px,
+      transparent 1px
+    );
+
+  /* размер ячейки сетки */
+  background-size:
+    auto,
+    32px 32px,
+    32px 32px;
+
+  /* фиксируем фон, чтобы сетка была «под» сценами */
+  background-attachment: fixed;
 }
 
 body {
