@@ -16,10 +16,9 @@ html, body {
   /* Базовый тёмный фон */
   background-color: #020617;
 
-  /* 1) радиальный градиент сверху
-     2–3) лёгкая цифровая сетка */
+  /* 1–2) цифровая сетка сверху
+     3) радиальный градиент снизу */
   background-image:
-    radial-gradient(circle at top, #020617 0, #020617 45%, #000 100%),
     linear-gradient(
       rgba(30, 64, 175, 0.35) 1px,
       transparent 1px
@@ -28,16 +27,17 @@ html, body {
       90deg,
       rgba(30, 64, 175, 0.28) 1px,
       transparent 1px
-    );
+    ),
+    radial-gradient(circle at top, #020617 0, #020617 45%, #000 100%);
 
-  /* размер ячейки сетки */
+  /* порядок размеров соответствует порядку слоёв */
   background-size:
-    auto,
-    32px 32px,
-    32px 32px;
+    32px 32px,   /* горизонтальные линии */
+    32px 32px,   /* вертикальные линии */
+    auto;        /* радикал занимает всё */
 
-  /* фиксируем фон, чтобы сетка была «под» сценами */
-  background-attachment: fixed;
+  /* фиксируем фон, чтобы сетка лежала "под" сценами, но всегда на месте */
+  background-attachment: fixed, fixed, fixed;
 }
 
 body {
