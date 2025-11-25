@@ -1,4 +1,3 @@
-// Подключаем React, ReactDOM, three.js и react-three-fiber через jsDelivr (ESM)
 import React, { StrictMode, useRef } from "https://cdn.jsdelivr.net/npm/react@18.3.1/+esm";
 import { createRoot } from "https://cdn.jsdelivr.net/npm/react-dom@18.3.1/client/+esm";
 import {
