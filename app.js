@@ -1,10 +1,11 @@
 // app.js
 
-// Импорты из importmap
+// Берём всё из importmap (одна версия React/ReactDOM/three-fiber)
 import React, { StrictMode, useRef, Fragment } from "react";
 import { createRoot } from "react-dom/client";
 import { Canvas, useFrame } from "@react-three/fiber";
-import * as THREE from "three"; // просто чтобы three подхватился, можно не использовать напрямую
+// three импортируется для r3f через importmap по имени "three" —
+// здесь отдельно *не* импортируем, чтобы не плодить экземпляры.
 
 /**
  * Мини-3D-сцена: вращающийся куб
