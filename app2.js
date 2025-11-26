@@ -4,7 +4,7 @@ import React, { StrictMode, Fragment } from "react";
 import { createRoot } from "react-dom/client";
 
 /**
- * Конфиг сцен (пока одна — hero)
+ * Конфиг сцен
  */
 const scenes = [
   {
@@ -13,82 +13,68 @@ const scenes = [
     title: "Цифровой Криминалист — первый выпуск",
     subtitle: "Игромир 2025. Публичный дебют форензик-системы",
     description:
-      "Ночной мегаполис, фасад Игромира 2025 заливают неоновые панели. " +
-      "На главном экране — форензик-дашборд: граф связей, спектры и временные ряды, " +
-      "отражающие работу моделей анализа речи, текста и сетевой активности. " +
-      "Перед экраном — аналитик «Цифрового Криминалиста», представитель Федеральной службы бессознательного. " +
-      "Она — проводник игрока в мир цифровой форензики и главный голос разъяснения всех процессов.",
+      "Ночной мегаполис и неоновый фасад Игромира 2025. " +
+      "На огромной панели — граф связей, спектры и временные ряды, " +
+      "которые показывают работу моделей анализа речи, текста и сетевой активности. " +
+      "Рядом — аналитик «Цифрового Криминалиста», представитель Федеральной службы бессознательного.",
     image: "https://comiccon2025.github.io/dcHero.png",
-    showGraph: true,
-    code: `// Титульный кадр: регистрация выпуска и героини
-const issue = initIssue({
-  id: 1,
-  title: "Цифровой Криминалист",
-  event: "Игромир 2025",
-  mode: ["VR", "AR", "WEB", "Desktop"]
-});
-
-// Описываем главного аналитика и её роль
-const hero = issue.registerHero({
-  role: "форензик-аналитик ФСБс",
-  skills: ["аудиофорензика", "стилометрия", "графовый анализ"],
-  uiPanels: ["связи", "волновые формы", "метаданные"]
-});
-
-// Стартовая сцена — знакомство на стенде
-issue.startScene({
-  id: "expo_intro",
-  location: "технологический павильон Игромира",
-  focus: "публичный показ цифровой форензик-системы"
-});`,
+    dominantGraph: true,
+    code: "", // в титульной сцене код не показываем
     explanation:
-      "Этот кадр играет роль обложки и точки входа. Мы фиксируем три вещи: " +
-      "1) Игромир 2025 как контекст; 2) появление бренда «Цифровой Криминалист»; " +
-      "3) героиню-аналитика, через которую игрок/читатель будет узнавать, как устроены реальные форензик-процессы. " +
-      "Мини-граф слева — стандартный элемент интерфейса: он будет появляться во всех сценах, где есть анализ связей."
+      "Граф в блоке «Схема процесса» показывает, как выпуск 01 связывает Игромир 2025, " +
+      "аналитика и форензик-модели: наверху события, в центре данные и модели, внизу — интерфейс игрока."
   }
 ];
 
 /**
- * Фирменный мини-граф для блока «Схема процесса»
- * (упрощённый вариант панели с обложки)
+ * Большой «детективный» граф для блока «Схема процесса»
+ * (слой событий → слой данных/моделей → слой интерфейса)
  */
 function ProcessGraph() {
-  // Узлы графа: сущности выпуска 01
   const nodes = [
-    { id: "issue", x: 70, y: 18, label: "ISSUE", type: "core" },
-    { id: "hero", x: 32, y: 38, label: "HERO", type: "entity" },
-    { id: "event", x: 108, y: 38, label: "EVENT", type: "entity" },
+    // верхний слой: контекст
+    { id: "igromir", x: 40, y: 24, label: "ИГРОМИР 2025", level: "top" },
+    { id: "brand", x: 120, y: 18, label: "ЦИФРОВОЙ КРИМИНАЛИСТ", level: "top" },
+    { id: "snejinka", x: 200, y: 24, label: "СТАНЦИЯ «СНЕЖИНКА»", level: "top" },
 
-    { id: "audio", x: 25, y: 58, label: "AUDIO", type: "model" },
-    { id: "style", x: 70, y: 58, label: "STYLE", type: "model" },
-    { id: "graph", x: 115, y: 58, label: "GRAPH", type: "model" },
+    // средний слой: данные и модели
+    { id: "audio", x: 40, y: 62, label: "АУДИО", level: "mid" },
+    { id: "text", x: 118, y: 56, label: "ТЕКСТ", level: "mid" },
+    { id: "meta", x: 196, y: 62, label: "МЕТАДАННЫЕ", level: "mid" },
 
-    { id: "ui", x: 40, y: 78, label: "UI", type: "entity" },
-    { id: "scene", x: 100, y: 78, label: "SCENE", type: "entity" }
+    { id: "graphs", x: 70, y: 88, label: "ГРАФ СВЯЗЕЙ", level: "mid2" },
+    { id: "spectra", x: 150, y: 88, label: "СПЕКТРОГРАММА", level: "mid2" },
+
+    // нижний слой: то, что видит человек
+    { id: "ui", x: 70, y: 120, label: "ИНТЕРФЕЙС ИГРОКА", level: "bottom" },
+    { id: "dossier", x: 150, y: 120, label: "ДОСЬЕ / СЦЕНА 01", level: "bottom" }
   ];
 
-  // Рёбра: как объекты связаны между собой
   const edges = [
-    ["issue", "hero"],
-    ["issue", "event"],
-    ["issue", "style"],
+    // верх → данные
+    ["igromir", "audio"],
+    ["igromir", "text"],
+    ["brand", "audio"],
+    ["brand", "text"],
+    ["brand", "meta"],
+    ["snejinka", "meta"],
 
-    ["hero", "audio"],
-    ["hero", "style"],
-    ["hero", "graph"],
+    // данные → модели
+    ["audio", "graphs"],
+    ["text", "graphs"],
+    ["text", "spectra"],
+    ["meta", "graphs"],
+    ["meta", "spectra"],
 
-    ["audio", "ui"],
-    ["style", "ui"],
-    ["graph", "scene"],
-    ["style", "scene"],
-    ["event", "scene"]
+    // модели → интерфейс
+    ["graphs", "ui"],
+    ["spectra", "dossier"],
+    ["graphs", "dossier"],
+    ["ui", "dossier"]
   ];
 
   const nodeById = {};
-  nodes.forEach((n) => {
-    nodeById[n.id] = n;
-  });
+  nodes.forEach((n) => (nodeById[n.id] = n));
 
   const edgeEls = edges.map(([from, to], idx) => {
     const a = nodeById[from];
@@ -100,7 +86,7 @@ function ProcessGraph() {
       y1: a.y,
       x2: b.x,
       y2: b.y,
-      className: "process-graph-edge"
+      className: "pg-edge"
     });
   });
 
@@ -111,75 +97,100 @@ function ProcessGraph() {
       React.createElement("circle", {
         cx: n.x,
         cy: n.y,
-        r: n.type === "core" ? 3.2 : 2.5,
-        className:
-          "process-graph-node process-graph-node-" + n.type
+        r: n.level === "top" ? 4 : 3,
+        className: "pg-node pg-node-" + n.level
       }),
       React.createElement(
         "text",
         {
           x: n.x,
-          y: n.y - (n.type === "core" ? 5.5 : 4.5),
-          className: "process-graph-label"
+          y: n.y - (n.level === "top" ? 7 : 6),
+          className: "pg-label"
         },
         n.label
       )
     )
   );
 
+  // две «волны» как на титульной панели
+  const waveTop =
+    "M 16 100 C 40 90 60 110 84 100 S 132 90 164 100 S 204 110 228 100";
+  const waveBottom =
+    "M 16 110 C 40 120 60 100 84 110 S 132 120 164 110 S 204 100 228 110";
+
   return React.createElement(
     "svg",
     {
       className: "process-graph",
-      viewBox: "0 0 140 90",
+      viewBox: "0 0 240 140",
       preserveAspectRatio: "xMidYMid meet"
     },
-    // Общий фон панели
+    // фон
     React.createElement("rect", {
       x: 0,
       y: 0,
-      width: 140,
-      height: 90,
-      className: "process-graph-bg"
+      width: 240,
+      height: 140,
+      className: "pg-bg"
     }),
-    // Подсветка слоя моделей
-    React.createElement("rect", {
-      x: 8,
-      y: 48,
-      width: 124,
-      height: 18,
-      className: "process-graph-band-models"
-    }),
-    // Подсветка слоя сцены/UI
-    React.createElement("rect", {
-      x: 16,
-      y: 68,
-      width: 108,
-      height: 16,
-      className: "process-graph-band-scenes"
-    }),
-    // Горизонтальные "нитки" как на доске расследования
+    // сетка
     React.createElement("path", {
-      d: "M0 32 H140 M0 52 H140 M0 72 H140",
-      className: "process-graph-grid"
+      d: "M0 40 H240 M0 80 H240 M0 120 H240",
+      className: "pg-grid"
     }),
+    React.createElement("path", {
+      d: "M40 0 V140 M120 0 V140 M200 0 V140",
+      className: "pg-grid"
+    }),
+    // полупрозрачные полосы слоёв
+    React.createElement("rect", {
+      x: 6,
+      y: 12,
+      width: 228,
+      height: 26,
+      className: "pg-band pg-band-top"
+    }),
+    React.createElement("rect", {
+      x: 6,
+      y: 50,
+      width: 228,
+      height: 32,
+      className: "pg-band pg-band-mid"
+    }),
+    React.createElement("rect", {
+      x: 6,
+      y: 116,
+      width: 228,
+      height: 18,
+      className: "pg-band pg-band-bottom"
+    }),
+    // рёбра и узлы
     edgeEls,
     nodeEls,
-    // Подпись снизу
+    // волны
+    React.createElement("path", {
+      d: waveTop,
+      className: "pg-wave pg-wave-top"
+    }),
+    React.createElement("path", {
+      d: waveBottom,
+      className: "pg-wave pg-wave-bottom"
+    }),
+    // подпись панели
     React.createElement(
       "text",
       {
-        x: 70,
-        y: 86,
-        className: "process-graph-caption"
+        x: 120,
+        y: 136,
+        className: "pg-caption"
       },
-      "Выпуск 01 · связи"
+      "ВЫПУСК 01 · КАРТА СВЯЗЕЙ"
     )
   );
 }
 
 /**
- * SVG-рамка панели
+ * Рамка комикс-панели
  */
 function ComicFrameSvg() {
   return React.createElement(
@@ -200,18 +211,6 @@ function ComicFrameSvg() {
       stroke: "rgba(148,163,184,0.7)",
       strokeWidth: "1.2",
       strokeDasharray: "1.5 2.5"
-    }),
-    React.createElement("path", {
-      d: "M8 10 Q 14 7 22 9",
-      fill: "none",
-      stroke: "rgba(248,250,252,0.4)",
-      strokeWidth: "0.6"
-    }),
-    React.createElement("path", {
-      d: "M78 50 Q 86 53 92 49",
-      fill: "none",
-      stroke: "rgba(56,189,248,0.5)",
-      strokeWidth: "0.6"
     })
   );
 }
@@ -222,37 +221,37 @@ function ComicFrameSvg() {
 function Scene(props) {
   const scene = props.scene;
 
-  // Контент кода + пояснение
-  const codeContent = React.createElement(
-    Fragment,
-    null,
-    React.createElement(
-      "pre",
-      null,
-      React.createElement("code", null, scene.code)
-    ),
-    scene.explanation
-      ? React.createElement(
-          "p",
-          { className: "code-explanation" },
-          scene.explanation
-        )
-      : null
-  );
-
-  let codeBlockChildren;
-  if (scene.showGraph) {
-    // Вариант с мини-графом слева
-    codeBlockChildren = React.createElement(
-      "div",
-      { className: "code-block-inner" },
-      React.createElement(ProcessGraph, null),
-      React.createElement("div", { className: "process-code" }, codeContent)
-    );
-  } else {
-    // Чисто текстовый вариант
-    codeBlockChildren = codeContent;
-  }
+  const codeBlock = scene.dominantGraph
+    ? // режим: граф во весь блок
+      React.createElement(
+        "div",
+        { className: "code-block code-block-graph" },
+        React.createElement(ProcessGraph, null),
+        scene.explanation
+          ? React.createElement(
+              "p",
+              { className: "code-explanation code-explanation-graph" },
+              scene.explanation
+            )
+          : null
+      )
+    : // стандартный режим: код + короткое объяснение
+      React.createElement(
+        "div",
+        { className: "code-block" },
+        React.createElement(
+          "pre",
+          null,
+          React.createElement("code", null, scene.code)
+        ),
+        scene.explanation
+          ? React.createElement(
+              "p",
+              { className: "code-explanation" },
+              scene.explanation
+            )
+          : null
+      );
 
   return React.createElement(
     "section",
@@ -261,7 +260,7 @@ function Scene(props) {
       "div",
       { className: "scene-inner" },
 
-      // Левая колонка: изображение
+      // Левая колонка: комикс-картинка
       React.createElement(
         "div",
         { className: "comic-visual-column" },
@@ -278,16 +277,14 @@ function Scene(props) {
             : React.createElement(
                 "span",
                 null,
-                "Здесь будет основное комикс-изображение и 3D-сцена для кадра «",
+                "Здесь будет основное комикс-изображение для сцены «",
                 scene.title,
-                "».",
-                React.createElement("br", null),
-                "Сейчас — прототип без 3D."
+                "»."
               )
         )
       ),
 
-      // Правая колонка: текст + код
+      // Правая колонка: текст + «Схема процесса»
       React.createElement(
         "div",
         { className: "comic-text-column" },
@@ -316,7 +313,7 @@ function Scene(props) {
               scene.description
             )
           : null,
-        React.createElement("div", { className: "code-block" }, codeBlockChildren)
+        codeBlock
       )
     )
   );
@@ -330,14 +327,14 @@ function SceneNav(props) {
   return React.createElement(
     Fragment,
     null,
-    scenes.map(function (scene) {
-      return React.createElement("a", {
+    scenes.map((scene) =>
+      React.createElement("a", {
         key: scene.id,
         href: "#scene-" + scene.id,
         title: scene.title,
         "aria-label": scene.title
-      });
-    })
+      })
+    )
   );
 }
 
@@ -345,13 +342,13 @@ function App() {
   return React.createElement(
     Fragment,
     null,
-    scenes.map(function (scene) {
-      return React.createElement(Scene, { key: scene.id, scene: scene });
-    })
+    scenes.map((scene) =>
+      React.createElement(Scene, { key: scene.id, scene })
+    )
   );
 }
 
-// Монтируем основное приложение
+// Монтируем
 const rootElement = document.getElementById("root");
 const root = createRoot(rootElement);
 
@@ -363,7 +360,6 @@ root.render(
   )
 );
 
-// Монтируем навигацию (справа точки)
 const navElement = document.querySelector(".scene-nav");
 if (navElement) {
   const navRoot = createRoot(navElement);
@@ -371,7 +367,7 @@ if (navElement) {
     React.createElement(
       StrictMode,
       null,
-      React.createElement(SceneNav, { scenes: scenes })
+      React.createElement(SceneNav, { scenes })
     )
   );
 }
