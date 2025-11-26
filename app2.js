@@ -19,7 +19,7 @@ const scenes = [
       "Рядом — аналитик «Цифрового Криминалиста», представитель Федеральной службы бессознательного.",
     image: "https://comiccon2025.github.io/dcHero.png",
     dominantGraph: true,
-    code: "", // в титульной сцене код не показываем
+    code: "",
     explanation:
       "Граф в блоке «Схема процесса» показывает, как выпуск 01 связывает Игромир 2025, " +
       "аналитика и форензик-модели: наверху события, в центре данные и модели, внизу — интерфейс игрока."
@@ -27,30 +27,112 @@ const scenes = [
 ];
 
 /**
- * Большой «детективный» граф для блока «Схема процесса»
- * (слой событий → слой данных/моделей → слой интерфейса)
+ * Большой граф для блока «Схема процесса»
+ * Узлы — капсулы с текстом внутри, никаких вылезающих подписей.
  */
 function ProcessGraph() {
   const nodes = [
     // верхний слой: контекст
-    { id: "igromir", x: 40, y: 24, label: "ИГРОМИР 2025", level: "top" },
-    { id: "brand", x: 120, y: 18, label: "ЦИФРОВОЙ КРИМИНАЛИСТ", level: "top" },
-    { id: "snejinka", x: 200, y: 24, label: "СТАНЦИЯ «СНЕЖИНКА»", level: "top" },
+    {
+      id: "igromir",
+      x: 40,
+      y: 30,
+      w: 78,
+      h: 18,
+      label: "ИГРОМИР 2025",
+      level: "top"
+    },
+    {
+      id: "brand",
+      x: 120,
+      y: 20,
+      w: 138,
+      h: 20,
+      label: "ЦИФРОВОЙ КРИМИНАЛИСТ",
+      level: "top"
+    },
+    {
+      id: "snejinka",
+      x: 200,
+      y: 30,
+      w: 124,
+      h: 18,
+      label: "СТАНЦИЯ «СНЕЖИНКА»",
+      level: "top"
+    },
 
-    // средний слой: данные и модели
-    { id: "audio", x: 40, y: 62, label: "АУДИО", level: "mid" },
-    { id: "text", x: 118, y: 56, label: "ТЕКСТ", level: "mid" },
-    { id: "meta", x: 196, y: 62, label: "МЕТАДАННЫЕ", level: "mid" },
+    // средний слой: данные
+    {
+      id: "audio",
+      x: 40,
+      y: 66,
+      w: 60,
+      h: 16,
+      label: "АУДИО",
+      level: "mid"
+    },
+    {
+      id: "text",
+      x: 118,
+      y: 60,
+      w: 60,
+      h: 16,
+      label: "ТЕКСТ",
+      level: "mid"
+    },
+    {
+      id: "meta",
+      x: 196,
+      y: 66,
+      w: 84,
+      h: 16,
+      label: "МЕТАДАННЫЕ",
+      level: "mid"
+    },
 
-    { id: "graphs", x: 70, y: 88, label: "ГРАФ СВЯЗЕЙ", level: "mid2" },
-    { id: "spectra", x: 150, y: 88, label: "СПЕКТРОГРАММА", level: "mid2" },
+    // средний слой 2: модели
+    {
+      id: "graphs",
+      x: 70,
+      y: 98,
+      w: 96,
+      h: 16,
+      label: "ГРАФ СВЯЗЕЙ",
+      level: "mid2"
+    },
+    {
+      id: "spectra",
+      x: 150,
+      y: 98,
+      w: 112,
+      h: 16,
+      label: "СПЕКТРОГРАММА",
+      level: "mid2"
+    },
 
     // нижний слой: интерфейс
-    { id: "ui", x: 70, y: 120, label: "ИНТЕРФЕЙС ИГРОКА", level: "bottom" },
-    { id: "dossier", x: 150, y: 120, label: "ДОСЬЕ / СЦЕНА 01", level: "bottom" }
+    {
+      id: "ui",
+      x: 70,
+      y: 128,
+      w: 124,
+      h: 18,
+      label: "ИНТЕРФЕЙС ИГРОКА",
+      level: "bottom"
+    },
+    {
+      id: "dossier",
+      x: 150,
+      y: 128,
+      w: 128,
+      h: 18,
+      label: "ДОСЬЕ / СЦЕНА 01",
+      level: "bottom"
+    }
   ];
 
   const edges = [
+    // верх → данные
     ["igromir", "audio"],
     ["igromir", "text"],
     ["brand", "audio"],
@@ -58,12 +140,14 @@ function ProcessGraph() {
     ["brand", "meta"],
     ["snejinka", "meta"],
 
+    // данные → модели
     ["audio", "graphs"],
     ["text", "graphs"],
     ["text", "spectra"],
     ["meta", "graphs"],
     ["meta", "spectra"],
 
+    // модели → интерфейс
     ["graphs", "ui"],
     ["spectra", "dossier"],
     ["graphs", "dossier"],
@@ -87,33 +171,41 @@ function ProcessGraph() {
     });
   });
 
-  const nodeEls = nodes.map((n) =>
-    React.createElement(
+  const nodeEls = nodes.map((n) => {
+    const rx = n.h / 2; // капсула
+    const ry = n.h / 2;
+    const xRect = n.x - n.w / 2;
+    const yRect = n.y - n.h / 2;
+
+    return React.createElement(
       "g",
       { key: "node-" + n.id },
-      React.createElement("circle", {
-        cx: n.x,
-        cy: n.y,
-        r: n.level === "top" ? 4 : 3,
+      React.createElement("rect", {
+        x: xRect,
+        y: yRect,
+        width: n.w,
+        height: n.h,
+        rx: rx,
+        ry: ry,
         className: "pg-node pg-node-" + n.level
       }),
       React.createElement(
         "text",
         {
           x: n.x,
-          y: n.y - (n.level === "top" ? 7 : 6),
+          y: n.y + 3, // чуть ниже геометрического центра, чтобы оптика была ровной
           className: "pg-label"
         },
         n.label
       )
-    )
-  );
+    );
+  });
 
   return React.createElement(
     "svg",
     {
       className: "process-graph",
-      viewBox: "0 0 240 140",
+      viewBox: "0 0 240 150",
       preserveAspectRatio: "xMidYMid meet"
     },
     // фон
@@ -121,16 +213,16 @@ function ProcessGraph() {
       x: 0,
       y: 0,
       width: 240,
-      height: 140,
+      height: 150,
       className: "pg-bg"
     }),
-    // сетка (тонкая, чтобы не отвлекала)
+    // лёгкая сетка
     React.createElement("path", {
-      d: "M0 40 H240 M0 80 H240 M0 120 H240",
+      d: "M0 44 H240 M0 86 H240 M0 128 H240",
       className: "pg-grid"
     }),
     React.createElement("path", {
-      d: "M40 0 V140 M120 0 V140 M200 0 V140",
+      d: "M40 0 V150 M120 0 V150 M200 0 V150",
       className: "pg-grid"
     }),
     edgeEls,
@@ -140,7 +232,7 @@ function ProcessGraph() {
       "text",
       {
         x: 120,
-        y: 136,
+        y: 146,
         className: "pg-caption"
       },
       "ВЫПУСК 01 · КАРТА СВЯЗЕЙ"
@@ -149,7 +241,7 @@ function ProcessGraph() {
 }
 
 /**
- * Рамка комикс-панели
+ * Рамка комикс-панели слева
  */
 function ComicFrameSvg() {
   return React.createElement(
@@ -181,8 +273,7 @@ function Scene(props) {
   const scene = props.scene;
 
   const codeBlock = scene.dominantGraph
-    ? // режим: граф во весь блок
-      React.createElement(
+    ? React.createElement(
         "div",
         { className: "code-block code-block-graph" },
         React.createElement(ProcessGraph, null),
@@ -194,8 +285,7 @@ function Scene(props) {
             )
           : null
       )
-    : // стандартный режим: код + короткое объяснение
-      React.createElement(
+    : React.createElement(
         "div",
         { className: "code-block" },
         React.createElement(
@@ -279,7 +369,7 @@ function Scene(props) {
 }
 
 /**
- * Навигация-точки
+ * Навигация-точки справа
  */
 function SceneNav(props) {
   const scenes = props.scenes;
@@ -307,7 +397,7 @@ function App() {
   );
 }
 
-// Монтируем
+// Монтируем основное приложение
 const rootElement = document.getElementById("root");
 const root = createRoot(rootElement);
 
@@ -319,6 +409,7 @@ root.render(
   )
 );
 
+// Монтируем навигацию-точки
 const navElement = document.querySelector(".scene-nav");
 if (navElement) {
   const navRoot = createRoot(navElement);
