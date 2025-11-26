@@ -1,11 +1,9 @@
 // app.js
 
-// Берём всё из importmap (одна версия React/ReactDOM/three-fiber)
+// Всё берём из importmap → одна версия React/ReactDOM/R3F
 import React, { StrictMode, useRef, Fragment } from "react";
 import { createRoot } from "react-dom/client";
 import { Canvas, useFrame } from "@react-three/fiber";
-// three импортируется для r3f через importmap по имени "three" —
-// здесь отдельно *не* импортируем, чтобы не плодить экземпляры.
 
 /**
  * Мини-3D-сцена: вращающийся куб
@@ -82,8 +80,8 @@ const app = initForensicPipeline({
 // Дальше в комиксе мы пройдёмся по каждому модулю:
 app.showStoryboard();`,
     explanation:
-      "Этот кадр задаёт контекст: единая система связывает арктическую станцию «Снежинка», " +
-      "игровые режимы и форензик-модели. Всё остальное — раскадровка этих модулей."
+      "Этот кадр задаёт контекст: единая система связывает «Снежинку», " +
+      "игровые режимы и форензик-модели. Дальше комикс раскрывает каждый модуль по отдельности."
   }
 ];
 
