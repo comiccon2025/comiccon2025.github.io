@@ -1,3 +1,6 @@
+// app.js
+
+// Импортируем React, ReactDOM, three-fiber как ES-модули с jsDelivr
 import React, { StrictMode, useRef } from "https://cdn.jsdelivr.net/npm/react@18.3.1/+esm";
 import { createRoot } from "https://cdn.jsdelivr.net/npm/react-dom@18.3.1/client/+esm";
 import {
@@ -7,11 +10,10 @@ import {
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.165.0/+esm";
 
 /**
- * Мини-3D-сцена: вращающийся куб поверх «арктического» градиента.
- * Это просто живой фон, дальше заменим на графы, станции и т.п.
+ * Мини-3D-сцена: вращающийся куб
  */
 function RotatingCube() {
-  const meshRef = useRef();
+  const meshRef = useRef(null);
 
   useFrame((state, delta) => {
     if (!meshRef.current) return;
@@ -19,41 +21,48 @@ function RotatingCube() {
     meshRef.current.rotation.y += delta * 0.45;
   });
 
-  return (
-    <mesh ref={meshRef}>
-      <boxGeometry args={[1.2, 1.2, 1.2]} />
-      <meshStandardMaterial
-        color={"#38bdf8"}
-        metalness={0.6}
-        roughness={0.25}
-        emissive={"#0f172a"}
-      />
-    </mesh>
+  return React.createElement(
+    "mesh",
+    { ref: meshRef },
+    React.createElement("boxGeometry", { args: [1.2, 1.2, 1.2] }),
+    React.createElement("meshStandardMaterial", {
+      color: "#38bdf8",
+      metalness: 0.6,
+      roughness: 0.25,
+      emissive: "#0f172a"
+    })
   );
 }
 
 function SimpleThreeBackground() {
-  return (
-    <Canvas
-      className="scene-canvas"
-      camera={{ position: [0, 0, 4.2], fov: 45 }}
-    >
-      <color attach="background" args={["#020617"]} />
-      <ambientLight intensity={0.5} />
-      <directionalLight
-        position={[2, 2, 3]}
-        intensity={1.5}
-        color={"#38bdf8"}
-      />
-      <pointLight position={[-3, -2, -5]} intensity={0.5} color={"#f97316"} />
-      <RotatingCube />
-    </Canvas>
+  return React.createElement(
+    Canvas,
+    {
+      className: "scene-canvas",
+      camera: { position: [0, 0, 4.2], fov: 45 }
+    },
+    // фон
+    React.createElement("color", {
+      attach: "background",
+      args: ["#020617"]
+    }),
+    React.createElement("ambientLight", { intensity: 0.5 }),
+    React.createElement("directionalLight", {
+      position: [2, 2, 3],
+      intensity: 1.5,
+      color: "#38bdf8"
+    }),
+    React.createElement("pointLight", {
+      position: [-3, -2, -5],
+      intensity: 0.5,
+      color: "#f97316"
+    }),
+    React.createElement(RotatingCube, null)
   );
 }
 
 /**
- * Конфиг сцен. Пока только одна — hero.
- * Дальше будем добавлять по одной сцене и расширять этот массив.
+ * Конфиг сцен (пока одна — hero)
  */
 const scenes = [
   {
@@ -81,40 +90,40 @@ app.showStoryboard();`,
 ];
 
 /**
- * SVG-рамка для слота комикс-изображения
+ * SVG-рамка панели
  */
 function ComicFrameSvg() {
-  return (
-    <svg
-      className="comic-frame-svg"
-      viewBox="0 0 100 60"
-      preserveAspectRatio="none"
-    >
-      <rect
-        x="2"
-        y="2"
-        width="96"
-        height="56"
-        rx="4"
-        ry="4"
-        fill="none"
-        stroke="rgba(148,163,184,0.7)"
-        strokeWidth="1.2"
-        strokeDasharray="1.5 2.5"
-      />
-      <path
-        d="M8 10 Q 14 7 22 9"
-        fill="none"
-        stroke="rgba(248,250,252,0.4)"
-        strokeWidth="0.6"
-      />
-      <path
-        d="M78 50 Q 86 53 92 49"
-        fill="none"
-        stroke="rgba(56,189,248,0.5)"
-        strokeWidth="0.6"
-      />
-    </svg>
+  return React.createElement(
+    "svg",
+    {
+      className: "comic-frame-svg",
+      viewBox: "0 0 100 60",
+      preserveAspectRatio: "none"
+    },
+    React.createElement("rect", {
+      x: "2",
+      y: "2",
+      width: "96",
+      height: "56",
+      rx: "4",
+      ry: "4",
+      fill: "none",
+      stroke: "rgba(148,163,184,0.7)",
+      strokeWidth: "1.2",
+      strokeDasharray: "1.5 2.5"
+    }),
+    React.createElement("path", {
+      d: "M8 10 Q 14 7 22 9",
+      fill: "none",
+      stroke: "rgba(248,250,252,0.4)",
+      strokeWidth: "0.6"
+    }),
+    React.createElement("path", {
+      d: "M78 50 Q 86 53 92 49",
+      fill: "none",
+      stroke: "rgba(56,189,248,0.5)",
+      strokeWidth: "0.6"
+    })
   );
 }
 
@@ -122,93 +131,130 @@ function ComicFrameSvg() {
  * Один кадр комикса
  */
 function Scene({ scene }) {
-  return (
-    <section id={`scene-${scene.id}`} className="scene">
-      <div className="scene-inner">
-        {/* Левая колонка: 3D-фон + слот под изображение комикса */}
-        <div className="comic-visual-column">
-          <ComicFrameSvg />
-          <div className="comic-image-slot">
-            {/* сюда позже подставим <img src="..."> с готовым кадром */}
-            <span>
-              Здесь будет основное комикс-изображение для сцены «{scene.title}».
-              <br />
-              Сейчас — прототип с 3D-фоном.
-            </span>
-          </div>
-          <SimpleThreeBackground />
-        </div>
+  return React.createElement(
+    "section",
+    { id: `scene-${scene.id}`, className: "scene" },
+    React.createElement(
+      "div",
+      { className: "scene-inner" },
 
-        {/* Правая колонка: текст + код */}
-        <div className="comic-text-column">
-          <div className="scene-label">СЦЕНА {scene.label}</div>
-          <h2 className="scene-title">{scene.title}</h2>
-          {scene.subtitle && (
-            <div className="scene-subtitle">{scene.subtitle}</div>
-          )}
-          {scene.description && (
-            <p className="scene-description">{scene.description}</p>
-          )}
+      // Левая колонка: 3D + слот под картинку
+      React.createElement(
+        "div",
+        { className: "comic-visual-column" },
+        React.createElement(ComicFrameSvg, null),
+        React.createElement(
+          "div",
+          { className: "comic-image-slot" },
+          React.createElement(
+            "span",
+            null,
+            `Здесь будет основное комикс-изображение для сцены «${scene.title}».`,
+            React.createElement("br", null),
+            "Сейчас — прототип с 3D-фоном."
+          )
+        ),
+        React.createElement(SimpleThreeBackground, null)
+      ),
 
-          <div className="code-block">
-            <pre>
-              <code>{scene.code}</code>
-            </pre>
-            {scene.explanation && (
-              <p className="code-explanation">{scene.explanation}</p>
-            )}
-          </div>
-        </div>
-      </div>
-    </section>
+      // Правая колонка: текст + код
+      React.createElement(
+        "div",
+        { className: "comic-text-column" },
+        React.createElement(
+          "div",
+          { className: "scene-label" },
+          `СЦЕНА ${scene.label}`
+        ),
+        React.createElement(
+          "h2",
+          { className: "scene-title" },
+          scene.title
+        ),
+        scene.subtitle
+          ? React.createElement(
+              "div",
+              { className: "scene-subtitle" },
+              scene.subtitle
+            )
+          : null,
+        scene.description
+          ? React.createElement(
+              "p",
+              { className: "scene-description" },
+              scene.description
+            )
+          : null,
+        React.createElement(
+          "div",
+          { className: "code-block" },
+          React.createElement(
+            "pre",
+            null,
+            React.createElement("code", null, scene.code)
+          ),
+          scene.explanation
+            ? React.createElement(
+                "p",
+                { className: "code-explanation" },
+                scene.explanation
+              )
+            : null
+        )
+      )
+    )
   );
 }
 
 /**
- * Навигация-точки по сценам (якоря)
+ * Навигация-точки
  */
 function SceneNav({ scenes }) {
-  return (
-    <>
-      {scenes.map((scene) => (
-        <a
-          key={scene.id}
-          href={`#scene-${scene.id}`}
-          title={scene.title}
-          aria-label={scene.title}
-        ></a>
-      ))}
-    </>
+  return React.createElement(
+    React.Fragment,
+    null,
+    scenes.map((scene) =>
+      React.createElement("a", {
+        key: scene.id,
+        href: `#scene-${scene.id}`,
+        title: scene.title,
+        "aria-label": scene.title
+      })
+    )
   );
 }
 
 function App() {
-  return (
-    <>
-      {scenes.map((scene) => (
-        <Scene key={scene.id} scene={scene} />
-      ))}
-    </>
+  return React.createElement(
+    React.Fragment,
+    null,
+    scenes.map((scene) =>
+      React.createElement(Scene, { key: scene.id, scene })
+    )
   );
 }
 
-// Монтируем React-приложение
+// Монтируем основное приложение
 const rootElement = document.getElementById("root");
 const root = createRoot(rootElement);
 
 root.render(
-  <StrictMode>
-    <App />
-  </StrictMode>
+  React.createElement(
+    StrictMode,
+    null,
+    React.createElement(App, null)
+  )
 );
 
-// Заполняем навигацию точками (простая несвязная с React часть)
-const nav = document.querySelector(".scene-nav");
-if (nav) {
-  const navRoot = createRoot(nav);
+// Монтируем навигацию
+const navElement = document.querySelector(".scene-nav");
+if (navElement) {
+  const navRoot = createRoot(navElement);
   navRoot.render(
-    <StrictMode>
-      <SceneNav scenes={scenes} />
-    </StrictMode>
+    React.createElement(
+      StrictMode,
+      null,
+      React.createElement(SceneNav, { scenes })
+    )
   );
 }
