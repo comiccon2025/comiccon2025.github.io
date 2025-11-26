@@ -274,7 +274,11 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
-  background: radial-gradient(circle at bottom, #020617, #000);
+  /* background: radial-gradient(circle at bottom, #020617, #000); */
+  background-image: linear-gradient(rgba(30, 64, 175, 0.35) 1px, transparent 1px), linear-gradient(90deg, rgba(30, 64, 175, 0.28) 1px, transparent 1px), radial-gradient(circle at top, #020617 0, #020617 45%, #000 100%);
+  background-size: 16px 16px, 16px 16px, auto;
+  background-attachment: fixed, fixed, fixed;
+  border-top: 2px dashed rgba(148, 163, 184, 0.8);
 }
 
 /* Адаптив под мобильные */
