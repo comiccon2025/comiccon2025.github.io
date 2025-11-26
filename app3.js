@@ -23,7 +23,7 @@ const scenes = [
     explanation:
       "Граф в блоке «Схема процесса» показывает, как выпуск 01 связывает Игромир 2025, " +
       "аналитика и форензик-модели: наверху события, в центре данные и модели, внизу — интерфейс игрока. " +
-      "Ниже — спектральный блок, который будет появляться во всех сценах с аудиоанализом."
+      "Под обложкой слева расположен спектральный блок, который будет повторяться во всех сценах с аудиоанализом."
   }
 ];
 
@@ -169,7 +169,7 @@ function ProcessGraph() {
 }
 
 /**
- * Мини-панель спектрального анализа — без текста, только волна и полосы.
+ * Мини-панель спектрального анализа — без текста, прозрачный фон.
  */
 function SpectralPanel() {
   const barHeights = [
@@ -246,13 +246,7 @@ function SpectralPanel() {
       viewBox: "0 0 240 80",
       preserveAspectRatio: "xMidYMid meet"
     },
-    React.createElement("rect", {
-      x: 0,
-      y: 0,
-      width: 240,
-      height: 80,
-      className: "sp-bg"
-    }),
+    // фон не рисуем — он прозрачный, оставляем только сетку + волны + полосы
     React.createElement("path", {
       d: "M0 22 H240 M0 44 H240 M0 66 H240",
       className: "sp-grid"
@@ -310,7 +304,6 @@ function Scene(props) {
         "div",
         { className: "code-block code-block-graph" },
         React.createElement(ProcessGraph, null),
-        React.createElement(SpectralPanel, null),
         scene.explanation
           ? React.createElement(
               "p",
@@ -343,7 +336,7 @@ function Scene(props) {
       "div",
       { className: "scene-inner" },
 
-      // Левая колонка: комикс-картинка
+      // Левая колонка: комикс-картинка + спектральная панель
       React.createElement(
         "div",
         { className: "comic-visual-column" },
@@ -364,7 +357,8 @@ function Scene(props) {
                 scene.title,
                 "»."
               )
-        )
+        ),
+        React.createElement(SpectralPanel, null)
       ),
 
       // Правая колонка: текст + «Схема процесса»
