@@ -23,7 +23,7 @@ const scenes = [
     explanation:
       "Граф в блоке «Схема процесса» показывает, как выпуск 01 связывает Игромир 2025, " +
       "аналитика и форензик-модели: наверху события, в центре данные и модели, внизу — интерфейс игрока. " +
-      "Ниже — стандартный спектральный блок, который будет появляться во всех сценах с аудиоанализом."
+      "Ниже — спектральный блок, который будет появляться во всех сценах с аудиоанализом."
   }
 ];
 
@@ -169,8 +169,7 @@ function ProcessGraph() {
 }
 
 /**
- * Мини-панель спектрального анализа — стандартный блок UI
- * (волновая форма + частотные полосы).
+ * Мини-панель спектрального анализа — без текста, только волна и полосы.
  */
 function SpectralPanel() {
   const barHeights = [
@@ -228,9 +227,17 @@ function SpectralPanel() {
     [240, 44]
   ];
 
-  const wavePath = wavePoints
+  // Замыкаем путь по базовой линии, чтобы волна была залитой областью
+  const baseLineY = 44;
+  const extendedPoints = [
+    [0, baseLineY],
+    ...wavePoints,
+    [240, baseLineY]
+  ];
+
+  const wavePath = extendedPoints
     .map(([x, y], idx) => (idx === 0 ? "M" : "L") + x + " " + y)
-    .join(" ");
+    .join(" ") + " Z";
 
   return React.createElement(
     "svg",
@@ -246,34 +253,23 @@ function SpectralPanel() {
       height: 80,
       className: "sp-bg"
     }),
-    // горизонтальная сетка
     React.createElement("path", {
       d: "M0 22 H240 M0 44 H240 M0 66 H240",
       className: "sp-grid"
     }),
-    // вертикальная сетка
     React.createElement("path", {
       d: "M40 0 V80 M120 0 V80 M200 0 V80",
       className: "sp-grid"
     }),
-    // волновая форма
+    // залитая волна
     React.createElement("path", {
       d: wavePath,
-      className: "sp-wave"
+      className: "sp-wave-fill",
+      fill: "#f69722",
+      stroke: "none"
     }),
     // полосы спектра
-    barEls,
-    // подписи
-    React.createElement(
-      "text",
-      { x: 8, y: 12, className: "sp-label-main" },
-      "СПЕКТРАЛЬНЫЙ АНАЛИЗ · АУДИО"
-    ),
-    React.createElement(
-      "text",
-      { x: 8, y: 74, className: "sp-label-sub" },
-      "Волновая форма + частотные полосы для сцены 01"
-    )
+    barEls
   );
 }
 
