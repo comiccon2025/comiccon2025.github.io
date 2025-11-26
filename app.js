@@ -1,9 +1,10 @@
 // app.js
 
-// Берём всё из глобальных объектов, которые дал UMD
-const { useRef, StrictMode, Fragment } = React;
-const { createRoot } = ReactDOM;
-const { Canvas, useFrame } = ReactThreeFiber;
+// Импорты из importmap
+import React, { StrictMode, useRef, Fragment } from "react";
+import { createRoot } from "react-dom/client";
+import { Canvas, useFrame } from "@react-three/fiber";
+import * as THREE from "three"; // просто чтобы three подхватился, можно не использовать напрямую
 
 /**
  * Мини-3D-сцена: вращающийся куб
@@ -237,8 +238,8 @@ function App() {
 }
 
 // Монтируем основное приложение
-var rootElement = document.getElementById("root");
-var root = createRoot(rootElement);
+const rootElement = document.getElementById("root");
+const root = createRoot(rootElement);
 
 root.render(
   React.createElement(
@@ -249,9 +250,9 @@ root.render(
 );
 
 // Монтируем навигацию (справа точки)
-var navElement = document.querySelector(".scene-nav");
+const navElement = document.querySelector(".scene-nav");
 if (navElement) {
-  var navRoot = createRoot(navElement);
+  const navRoot = createRoot(navElement);
   navRoot.render(
     React.createElement(
       StrictMode,
