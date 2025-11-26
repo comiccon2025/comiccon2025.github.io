@@ -45,13 +45,12 @@ function ProcessGraph() {
     { id: "graphs", x: 70, y: 88, label: "ГРАФ СВЯЗЕЙ", level: "mid2" },
     { id: "spectra", x: 150, y: 88, label: "СПЕКТРОГРАММА", level: "mid2" },
 
-    // нижний слой: то, что видит человек
+    // нижний слой: интерфейс
     { id: "ui", x: 70, y: 120, label: "ИНТЕРФЕЙС ИГРОКА", level: "bottom" },
     { id: "dossier", x: 150, y: 120, label: "ДОСЬЕ / СЦЕНА 01", level: "bottom" }
   ];
 
   const edges = [
-    // верх → данные
     ["igromir", "audio"],
     ["igromir", "text"],
     ["brand", "audio"],
@@ -59,14 +58,12 @@ function ProcessGraph() {
     ["brand", "meta"],
     ["snejinka", "meta"],
 
-    // данные → модели
     ["audio", "graphs"],
     ["text", "graphs"],
     ["text", "spectra"],
     ["meta", "graphs"],
     ["meta", "spectra"],
 
-    // модели → интерфейс
     ["graphs", "ui"],
     ["spectra", "dossier"],
     ["graphs", "dossier"],
@@ -112,12 +109,6 @@ function ProcessGraph() {
     )
   );
 
-  // две «волны» как на титульной панели
-  const waveTop =
-    "M 16 100 C 40 90 60 110 84 100 S 132 90 164 100 S 204 110 228 100";
-  const waveBottom =
-    "M 16 110 C 40 120 60 100 84 110 S 132 120 164 110 S 204 100 228 110";
-
   return React.createElement(
     "svg",
     {
@@ -133,7 +124,7 @@ function ProcessGraph() {
       height: 140,
       className: "pg-bg"
     }),
-    // сетка
+    // сетка (тонкая, чтобы не отвлекала)
     React.createElement("path", {
       d: "M0 40 H240 M0 80 H240 M0 120 H240",
       className: "pg-grid"
@@ -142,40 +133,8 @@ function ProcessGraph() {
       d: "M40 0 V140 M120 0 V140 M200 0 V140",
       className: "pg-grid"
     }),
-    // полупрозрачные полосы слоёв
-    React.createElement("rect", {
-      x: 6,
-      y: 12,
-      width: 228,
-      height: 26,
-      className: "pg-band pg-band-top"
-    }),
-    React.createElement("rect", {
-      x: 6,
-      y: 50,
-      width: 228,
-      height: 32,
-      className: "pg-band pg-band-mid"
-    }),
-    React.createElement("rect", {
-      x: 6,
-      y: 116,
-      width: 228,
-      height: 18,
-      className: "pg-band pg-band-bottom"
-    }),
-    // рёбра и узлы
     edgeEls,
     nodeEls,
-    // волны
-    React.createElement("path", {
-      d: waveTop,
-      className: "pg-wave pg-wave-top"
-    }),
-    React.createElement("path", {
-      d: waveBottom,
-      className: "pg-wave pg-wave-bottom"
-    }),
     // подпись панели
     React.createElement(
       "text",
