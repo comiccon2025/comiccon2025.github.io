@@ -331,3 +331,62 @@ body {
   display: block;
 }
 
+/* Внутренний layout блока "Схема процесса" с мини-графом */
+.code-block-inner {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+/* Контейнер с кодом */
+.process-code {
+  flex: 1 1 auto;
+}
+
+/* Мини-граф (панель как на обложке) */
+.process-graph {
+  width: 150px;
+  height: 90px;
+  flex-shrink: 0;
+  border-radius: 0.6rem;
+  overflow: hidden;
+}
+
+/* Тёмный фон панели */
+.process-graph-bg {
+  fill: #020617;
+}
+
+/* Лёгкие горизонтальные сетки */
+.process-graph-grid {
+  stroke: rgba(148, 163, 184, 0.25);
+  stroke-width: 0.5;
+}
+
+/* Рёбра графа */
+.process-graph-edge {
+  stroke: #f97316;
+  stroke-width: 1;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.9;
+}
+
+/* Узлы графа */
+.process-graph-node {
+  fill: #f97316;
+  stroke: rgba(248, 250, 252, 0.9);
+  stroke-width: 0.4;
+}
+
+/* Адаптив: на мобильных граф уезжает наверх, код под ним */
+@media (max-width: 900px) {
+  .code-block-inner {
+    flex-direction: column;
+  }
+
+  .process-graph {
+    width: 100%;
+    height: auto;
+  }
+}
