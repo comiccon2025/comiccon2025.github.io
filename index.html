@@ -56,13 +56,14 @@
     </footer>
 
     <!-- Import map: говорим браузеру, где брать react, react-dom и @react-three/fiber -->
+    <!-- ОДНА import map: говорим, где брать react, react-dom, r3f, three -->
     <script type="importmap">
       {
         "imports": {
           "react": "https://cdn.jsdelivr.net/npm/react@18.2.0/+esm",
           "react-dom/client": "https://cdn.jsdelivr.net/npm/react-dom@18.2.0/client/+esm",
           "@react-three/fiber": "https://cdn.jsdelivr.net/npm/@react-three/fiber@9.0.0/+esm",
-          "three": "https://cdn.jsdelivr.net/npm/three@0.155.0/+esm"
+          "three": "https://cdn.jsdelivr.net/npm/three@0.155.0/build/three.module.js"
         }
       }
     </script>
