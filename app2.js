@@ -154,9 +154,9 @@ function ProcessGraph() {
 
   // параметры «прикидочного» размера: шрифт 6px, по 2px воздуха вокруг
   const fontSize = 6;
-  const paddingX = 6; // слева/справа
-  const paddingY = 2; // сверху/снизу
-  const charWidth = 4; // примерно ширина символа в наших заглавных надписях
+  const paddingX = 4;      // было 6 — чуть уменьшили ширину капсул
+  const paddingY = 2;
+  const charWidth = 3.1;   // было 4 — капсулы стали заметно уже
 
   const nodeEls = nodes.map((n) => {
     const textLen = n.label.length;
@@ -184,7 +184,7 @@ function ProcessGraph() {
         "text",
         {
           x: n.x,
-          y: n.y + 2, // чуть ниже центра для оптики
+          y: n.y + 2,
           className: "pg-label pg-label-" + n.level
         },
         n.label
