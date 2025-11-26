@@ -344,11 +344,6 @@ body {
 }
 
 /* Вариант блока "Схема процесса", где главный элемент — граф */
-.code-block-graph {
-  padding: 0.6rem 0.7rem 0.8rem;
-}
-
-/* Граф занимает почти весь блок */
 .process-graph {
   width: 100%;
   height: auto;
@@ -357,7 +352,6 @@ body {
   overflow: hidden;
 }
 
-/* Фон и сетка */
 .pg-bg {
   fill: #020617;
 }
@@ -367,24 +361,6 @@ body {
   stroke-width: 0.6;
 }
 
-/* Слоевые полосы */
-.pg-band {
-  stroke: none;
-}
-
-.pg-band-top {
-  fill: rgba(249, 115, 22, 0.06);
-}
-
-.pg-band-mid {
-  fill: rgba(56, 189, 248, 0.07);
-}
-
-.pg-band-bottom {
-  fill: rgba(148, 163, 184, 0.08);
-}
-
-/* Рёбра */
 .pg-edge {
   stroke: rgba(248, 250, 252, 0.55);
   stroke-width: 1.1;
@@ -392,7 +368,6 @@ body {
   stroke-linejoin: round;
 }
 
-/* Узлы */
 .pg-node {
   stroke-width: 0.7;
 }
@@ -413,7 +388,6 @@ body {
   stroke: #cbd5f5;
 }
 
-/* Подписи узлов и панели */
 .pg-label {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
@@ -431,33 +405,4 @@ body {
   text-anchor: middle;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-}
-
-/* Волны, как в титульном UI */
-.pg-wave {
-  fill: none;
-  stroke-width: 1.3;
-  stroke-linecap: round;
-}
-
-.pg-wave-top {
-  stroke: #f97316;
-}
-
-.pg-wave-bottom {
-  stroke: #38bdf8;
-}
-
-/* Подпись под графом */
-.code-explanation-graph {
-  margin-top: 0.55rem;
-  font-size: 0.78rem;
-  color: #a3a3a3;
-}
-
-/* На мобильных граф остаётся главным, текст уходит ниже */
-@media (max-width: 900px) {
-  .code-block-graph {
-    padding: 0.5rem 0.5rem 0.7rem;
-  }
 }
