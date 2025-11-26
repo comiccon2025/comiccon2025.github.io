@@ -343,43 +343,86 @@ body {
   flex: 1 1 auto;
 }
 
-/* Мини-граф (панель как на обложке) */
+/* Мини-граф: общие размеры */
 .process-graph {
   width: 150px;
-  height: 90px;
+  height: 100px;
   flex-shrink: 0;
   border-radius: 0.6rem;
   overflow: hidden;
 }
 
-/* Тёмный фон панели */
+/* Фон панели */
 .process-graph-bg {
   fill: #020617;
 }
 
-/* Лёгкие горизонтальные сетки */
+/* Подсветка слоя моделей и слоя сцены */
+.process-graph-band-models {
+  fill: rgba(56, 189, 248, 0.09);
+}
+
+.process-graph-band-scenes {
+  fill: rgba(249, 115, 22, 0.06);
+}
+
+/* Горизонтальные "нитки" сетки */
 .process-graph-grid {
   stroke: rgba(148, 163, 184, 0.25);
-  stroke-width: 0.5;
+  stroke-width: 0.6;
 }
 
 /* Рёбра графа */
 .process-graph-edge {
-  stroke: #f97316;
+  stroke: rgba(248, 250, 252, 0.45);
   stroke-width: 1;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: 0.9;
 }
 
-/* Узлы графа */
+/* Узлы графа по типам */
 .process-graph-node {
-  fill: #f97316;
-  stroke: rgba(248, 250, 252, 0.9);
-  stroke-width: 0.4;
+  stroke-width: 0.6;
 }
 
-/* Адаптив: на мобильных граф уезжает наверх, код под ним */
+.process-graph-node-core {
+  fill: #f97316;
+  stroke: #fed7aa;
+}
+
+.process-graph-node-model {
+  fill: #0ea5e9;
+  stroke: #bae6fd;
+}
+
+.process-graph-node-entity {
+  fill: #e5e7eb;
+  stroke: #cbd5f5;
+}
+
+/* Подписи узлов */
+.process-graph-label {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 5px;
+  fill: #cbd5f5;
+  opacity: 0.9;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+/* Подпись панели */
+.process-graph-caption {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 5px;
+  fill: rgba(148, 163, 184, 0.95);
+  text-anchor: middle;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* Адаптив: на мобильных граф сверху, код ниже */
 @media (max-width: 900px) {
   .code-block-inner {
     flex-direction: column;
