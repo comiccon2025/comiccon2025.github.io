@@ -418,3 +418,59 @@ body {
   letter-spacing: 0.12em;
   text-transform: uppercase;
 }
+
+
+
+
+
+
+
+
+
+.spectral-panel {
+  width: 100%;
+  display: block;
+  margin-top: 0.75rem;
+  border-radius: 0.75rem;
+  overflow: hidden;
+}
+
+.sp-bg {
+  fill: #020617;
+}
+
+.sp-grid {
+  stroke: rgba(30, 64, 175, 0.45);
+  stroke-width: 0.5;
+}
+
+.sp-wave {
+  stroke: #fb923c;
+  stroke-width: 1.2;
+  fill: none;
+}
+
+.sp-bar {
+  fill: #0ea5e9;
+  opacity: 0.9;
+}
+
+.sp-bar-cap {
+  fill: #e0f2fe;
+}
+
+.sp-label-main {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 6px;
+  fill: #e5e7eb;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.sp-label-sub {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  font-size: 5px;
+  fill: #9ca3af;
+}
