@@ -1,13 +1,9 @@
 // app.js
 
-// Импортируем React, ReactDOM, three-fiber как ES-модули с jsDelivr
-import React, { StrictMode, useRef } from "https://cdn.jsdelivr.net/npm/react@18.3.1/+esm";
-import { createRoot } from "https://cdn.jsdelivr.net/npm/react-dom@18.3.1/client/+esm";
-import {
-  Canvas,
-  useFrame
-} from "https://cdn.jsdelivr.net/npm/@react-three/fiber@9.4.0/+esm";
-import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.165.0/+esm";
+// Берём всё из глобальных объектов, которые дал UMD
+const { useRef, StrictMode, Fragment } = React;
+const { createRoot } = ReactDOM;
+const { Canvas, useFrame } = ReactThreeFiber;
 
 /**
  * Мини-3D-сцена: вращающийся куб
@@ -130,10 +126,12 @@ function ComicFrameSvg() {
 /**
  * Один кадр комикса
  */
-function Scene({ scene }) {
+function Scene(props) {
+  const scene = props.scene;
+
   return React.createElement(
     "section",
-    { id: `scene-${scene.id}`, className: "scene" },
+    { id: "scene-" + scene.id, className: "scene" },
     React.createElement(
       "div",
       { className: "scene-inner" },
@@ -149,7 +147,9 @@ function Scene({ scene }) {
           React.createElement(
             "span",
             null,
-            `Здесь будет основное комикс-изображение для сцены «${scene.title}».`,
+            "Здесь будет основное комикс-изображение для сцены «",
+            scene.title,
+            "».",
             React.createElement("br", null),
             "Сейчас — прототип с 3D-фоном."
           )
@@ -164,7 +164,8 @@ function Scene({ scene }) {
         React.createElement(
           "div",
           { className: "scene-label" },
-          `СЦЕНА ${scene.label}`
+          "СЦЕНА ",
+          scene.label
         ),
         React.createElement(
           "h2",
@@ -209,34 +210,35 @@ function Scene({ scene }) {
 /**
  * Навигация-точки
  */
-function SceneNav({ scenes }) {
+function SceneNav(props) {
+  const scenes = props.scenes;
   return React.createElement(
-    React.Fragment,
+    Fragment,
     null,
-    scenes.map((scene) =>
-      React.createElement("a", {
+    scenes.map(function (scene) {
+      return React.createElement("a", {
         key: scene.id,
-        href: `#scene-${scene.id}`,
+        href: "#scene-" + scene.id,
         title: scene.title,
         "aria-label": scene.title
-      })
-    )
+      });
+    })
   );
 }
 
 function App() {
   return React.createElement(
-    React.Fragment,
+    Fragment,
     null,
-    scenes.map((scene) =>
-      React.createElement(Scene, { key: scene.id, scene })
-    )
+    scenes.map(function (scene) {
+      return React.createElement(Scene, { key: scene.id, scene: scene });
+    })
   );
 }
 
 // Монтируем основное приложение
-const rootElement = document.getElementById("root");
-const root = createRoot(rootElement);
+var rootElement = document.getElementById("root");
+var root = createRoot(rootElement);
 
 root.render(
   React.createElement(
@@ -246,15 +248,15 @@ root.render(
   )
 );
 
-// Монтируем навигацию
-const navElement = document.querySelector(".scene-nav");
+// Монтируем навигацию (справа точки)
+var navElement = document.querySelector(".scene-nav");
 if (navElement) {
-  const navRoot = createRoot(navElement);
+  var navRoot = createRoot(navElement);
   navRoot.render(
     React.createElement(
       StrictMode,
       null,
-      React.createElement(SceneNav, { scenes })
+      React.createElement(SceneNav, { scenes: scenes })
     )
   );
 }
