@@ -19,6 +19,7 @@ const scenes = [
       "Перед экраном — аналитик «Цифрового Криминалиста», представитель Федеральной службы бессознательного. " +
       "Она — проводник игрока в мир цифровой форензики и главный голос разъяснения всех процессов.",
     image: "https://comiccon2025.github.io/dcHero.png",
+    showGraph: true,
     code: `// Титульный кадр: регистрация выпуска и героини
 const issue = initIssue({
   id: 1,
@@ -29,7 +30,7 @@ const issue = initIssue({
 
 // Описываем главного аналитика и её роль
 const hero = issue.registerHero({
-  role: "форензик-аналитик ФСБ",
+  role: "форензик-аналитик ФСБс",
   skills: ["аудиофорензика", "стилометрия", "графовый анализ"],
   uiPanels: ["связи", "волновые формы", "метаданные"]
 });
@@ -43,9 +44,115 @@ issue.startScene({
     explanation:
       "Этот кадр играет роль обложки и точки входа. Мы фиксируем три вещи: " +
       "1) Игромир 2025 как контекст; 2) появление бренда «Цифровой Криминалист»; " +
-      "3) героиню-аналитика, через которую игрок/читатель будет узнавать, как устроены реальные форензик-процессы."
+      "3) героиню-аналитика, через которую игрок/читатель будет узнавать, как устроены реальные форензик-процессы. " +
+      "Мини-граф слева — стандартный элемент интерфейса: он будет появляться во всех сценах, где есть анализ связей."
   }
 ];
+
+/**
+ * Фирменный мини-граф для блока «Схема процесса»
+ * (упрощённый вариант панели с обложки)
+ */
+function ProcessGraph() {
+  const nodes = [
+    { id: "a1", x: 12, y: 18 },
+    { id: "a2", x: 35, y: 10 },
+    { id: "a3", x: 60, y: 16 },
+    { id: "a4", x: 82, y: 11 },
+    { id: "a5", x: 104, y: 20 },
+
+    { id: "b1", x: 18, y: 36 },
+    { id: "b2", x: 40, y: 30 },
+    { id: "b3", x: 63, y: 34 },
+    { id: "b4", x: 86, y: 30 },
+    { id: "b5", x: 108, y: 38 },
+
+    { id: "c1", x: 24, y: 54 },
+    { id: "c2", x: 46, y: 48 },
+    { id: "c3", x: 70, y: 52 },
+    { id: "c4", x: 94, y: 46 }
+  ];
+
+  const edges = [
+    ["a1", "a2"],
+    ["a2", "a3"],
+    ["a3", "a4"],
+    ["a4", "a5"],
+
+    ["a1", "b1"],
+    ["a2", "b2"],
+    ["a3", "b3"],
+    ["a4", "b4"],
+    ["a5", "b5"],
+
+    ["b1", "b2"],
+    ["b2", "b3"],
+    ["b3", "b4"],
+    ["b4", "b5"],
+
+    ["b1", "c1"],
+    ["b2", "c2"],
+    ["b3", "c3"],
+    ["b4", "c4"],
+
+    ["c1", "c2"],
+    ["c2", "c3"],
+    ["c3", "c4"]
+  ];
+
+  const nodeById = {};
+  nodes.forEach((n) => {
+    nodeById[n.id] = n;
+  });
+
+  const edgeEls = edges.map(([from, to], idx) => {
+    const a = nodeById[from];
+    const b = nodeById[to];
+    if (!a || !b) return null;
+    return React.createElement("line", {
+      key: "edge-" + idx,
+      x1: a.x,
+      y1: a.y,
+      x2: b.x,
+      y2: b.y,
+      className: "process-graph-edge"
+    });
+  });
+
+  const nodeEls = nodes.map((n) =>
+    React.createElement("circle", {
+      key: "node-" + n.id,
+      cx: n.x,
+      cy: n.y,
+      r: 2.4,
+      className: "process-graph-node"
+    })
+  );
+
+  return React.createElement(
+    "svg",
+    {
+      className: "process-graph",
+      viewBox: "0 0 120 70",
+      preserveAspectRatio: "xMidYMid meet"
+    },
+    // лёгкий фон-панель
+    React.createElement("rect", {
+      x: 0,
+      y: 0,
+      width: 120,
+      height: 70,
+      className: "process-graph-bg"
+    }),
+    // горизонтальные псевдо-сетки
+    React.createElement("path", {
+      d: "M0 23 H120 M0 46 H120",
+      className: "process-graph-grid"
+    }),
+    edgeEls,
+    nodeEls
+  );
+}
 
 /**
  * SVG-рамка панели
@@ -91,6 +198,38 @@ function ComicFrameSvg() {
 function Scene(props) {
   const scene = props.scene;
 
+  // Контент кода + пояснение
+  const codeContent = React.createElement(
+    Fragment,
+    null,
+    React.createElement(
+      "pre",
+      null,
+      React.createElement("code", null, scene.code)
+    ),
+    scene.explanation
+      ? React.createElement(
+          "p",
+          { className: "code-explanation" },
+          scene.explanation
+        )
+      : null
+  );
+
+  let codeBlockChildren;
+  if (scene.showGraph) {
+    // Вариант с мини-графом слева
+    codeBlockChildren = React.createElement(
+      "div",
+      { className: "code-block-inner" },
+      React.createElement(ProcessGraph, null),
+      React.createElement("div", { className: "process-code" }, codeContent)
+    );
+  } else {
+    // Чисто текстовый вариант
+    codeBlockChildren = codeContent;
+  }
+
   return React.createElement(
     "section",
     { id: "scene-" + scene.id, className: "scene" },
@@ -98,7 +237,7 @@ function Scene(props) {
       "div",
       { className: "scene-inner" },
 
-      // Левая колонка: слот под картинку
+      // Левая колонка: изображение
       React.createElement(
         "div",
         { className: "comic-visual-column" },
@@ -153,22 +292,7 @@ function Scene(props) {
               scene.description
             )
           : null,
-        React.createElement(
-          "div",
-          { className: "code-block" },
-          React.createElement(
-            "pre",
-            null,
-            React.createElement("code", null, scene.code)
-          ),
-          scene.explanation
-            ? React.createElement(
-                "p",
-                { className: "code-explanation" },
-                scene.explanation
-              )
-            : null
-        )
+        React.createElement("div", { className: "code-block" }, codeBlockChildren)
       )
     )
   );
