@@ -54,50 +54,35 @@ issue.startScene({
  * (упрощённый вариант панели с обложки)
  */
 function ProcessGraph() {
+  // Узлы графа: сущности выпуска 01
   const nodes = [
-    { id: "a1", x: 12, y: 18 },
-    { id: "a2", x: 35, y: 10 },
-    { id: "a3", x: 60, y: 16 },
-    { id: "a4", x: 82, y: 11 },
-    { id: "a5", x: 104, y: 20 },
+    { id: "issue", x: 70, y: 18, label: "ISSUE", type: "core" },
+    { id: "hero", x: 32, y: 38, label: "HERO", type: "entity" },
+    { id: "event", x: 108, y: 38, label: "EVENT", type: "entity" },
 
-    { id: "b1", x: 18, y: 36 },
-    { id: "b2", x: 40, y: 30 },
-    { id: "b3", x: 63, y: 34 },
-    { id: "b4", x: 86, y: 30 },
-    { id: "b5", x: 108, y: 38 },
+    { id: "audio", x: 25, y: 58, label: "AUDIO", type: "model" },
+    { id: "style", x: 70, y: 58, label: "STYLE", type: "model" },
+    { id: "graph", x: 115, y: 58, label: "GRAPH", type: "model" },
 
-    { id: "c1", x: 24, y: 54 },
-    { id: "c2", x: 46, y: 48 },
-    { id: "c3", x: 70, y: 52 },
-    { id: "c4", x: 94, y: 46 }
+    { id: "ui", x: 40, y: 78, label: "UI", type: "entity" },
+    { id: "scene", x: 100, y: 78, label: "SCENE", type: "entity" }
   ];
 
+  // Рёбра: как объекты связаны между собой
   const edges = [
-    ["a1", "a2"],
-    ["a2", "a3"],
-    ["a3", "a4"],
-    ["a4", "a5"],
+    ["issue", "hero"],
+    ["issue", "event"],
+    ["issue", "style"],
 
-    ["a1", "b1"],
-    ["a2", "b2"],
-    ["a3", "b3"],
-    ["a4", "b4"],
-    ["a5", "b5"],
+    ["hero", "audio"],
+    ["hero", "style"],
+    ["hero", "graph"],
 
-    ["b1", "b2"],
-    ["b2", "b3"],
-    ["b3", "b4"],
-    ["b4", "b5"],
-
-    ["b1", "c1"],
-    ["b2", "c2"],
-    ["b3", "c3"],
-    ["b4", "c4"],
-
-    ["c1", "c2"],
-    ["c2", "c3"],
-    ["c3", "c4"]
+    ["audio", "ui"],
+    ["style", "ui"],
+    ["graph", "scene"],
+    ["style", "scene"],
+    ["event", "scene"]
   ];
 
   const nodeById = {};
@@ -120,37 +105,76 @@ function ProcessGraph() {
   });
 
   const nodeEls = nodes.map((n) =>
-    React.createElement("circle", {
-      key: "node-" + n.id,
-      cx: n.x,
-      cy: n.y,
-      r: 2.4,
-      className: "process-graph-node"
-    })
+    React.createElement(
+      "g",
+      { key: "node-" + n.id },
+      React.createElement("circle", {
+        cx: n.x,
+        cy: n.y,
+        r: n.type === "core" ? 3.2 : 2.5,
+        className:
+          "process-graph-node process-graph-node-" + n.type
+      }),
+      React.createElement(
+        "text",
+        {
+          x: n.x,
+          y: n.y - (n.type === "core" ? 5.5 : 4.5),
+          className: "process-graph-label"
+        },
+        n.label
+      )
+    )
   );
 
   return React.createElement(
     "svg",
     {
       className: "process-graph",
-      viewBox: "0 0 120 70",
+      viewBox: "0 0 140 90",
       preserveAspectRatio: "xMidYMid meet"
     },
-    // лёгкий фон-панель
+    // Общий фон панели
     React.createElement("rect", {
       x: 0,
       y: 0,
-      width: 120,
-      height: 70,
+      width: 140,
+      height: 90,
       className: "process-graph-bg"
     }),
-    // горизонтальные псевдо-сетки
+    // Подсветка слоя моделей
+    React.createElement("rect", {
+      x: 8,
+      y: 48,
+      width: 124,
+      height: 18,
+      className: "process-graph-band-models"
+    }),
+    // Подсветка слоя сцены/UI
+    React.createElement("rect", {
+      x: 16,
+      y: 68,
+      width: 108,
+      height: 16,
+      className: "process-graph-band-scenes"
+    }),
+    // Горизонтальные "нитки" как на доске расследования
     React.createElement("path", {
-      d: "M0 23 H120 M0 46 H120",
+      d: "M0 32 H140 M0 52 H140 M0 72 H140",
       className: "process-graph-grid"
     }),
     edgeEls,
-    nodeEls
+    nodeEls,
+    // Подпись снизу
+    React.createElement(
+      "text",
+      {
+        x: 70,
+        y: 86,
+        className: "process-graph-caption"
+      },
+      "Выпуск 01 · связи"
+    )
   );
 }
 
