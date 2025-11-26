@@ -271,7 +271,7 @@ body {
   padding: 1rem 1.5rem 1.5rem;
   font-size: 1rem;
   color: #9ca3af;
-  display: flex;
+ /* display: flex; */
   align-items: center;
   gap: 1rem;
   /* background: radial-gradient(circle at bottom, #020617, #000); */
