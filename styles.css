@@ -368,33 +368,45 @@ body {
   stroke-linejoin: round;
 }
 
-.pg-node {
-  stroke-width: 0.7;
-}
-
+/* Капсулы по уровням */
 .pg-node-top {
   fill: #f97316;
   stroke: #fed7aa;
+  stroke-width: 0.7;
 }
 
 .pg-node-mid,
 .pg-node-mid2 {
   fill: #0ea5e9;
   stroke: #bae6fd;
+  stroke-width: 0.7;
 }
 
+/* Низ — тёмный, чтобы текст светился */
 .pg-node-bottom {
-  fill: #e5e7eb;
-  stroke: #cbd5f5;
+  fill: #020617;
+  stroke: #e5e7eb;
+  stroke-width: 0.7;
 }
 
+/* Подписи: базовая для верх/середины */
 .pg-label {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
     "Liberation Mono", "Courier New", monospace;
   font-size: 6px;
-  fill: #cbd5f5;
   text-anchor: middle;
   pointer-events: none;
+}
+
+.pg-label-top,
+.pg-label-mid,
+.pg-label-mid2 {
+  fill: #eef2ff;
+}
+
+/* Для нижнего ряда — светлый текст по тёмному */
+.pg-label-bottom {
+  fill: #e5e7eb;
 }
 
 .pg-caption {
