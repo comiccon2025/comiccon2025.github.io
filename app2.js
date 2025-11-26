@@ -28,35 +28,30 @@ const scenes = [
 
 /**
  * Большой граф для блока «Схема процесса»
- * Узлы — капсулы с текстом внутри, никаких вылезающих подписей.
+ * Узлы — компактные капсулы, размер которых привязан к длине текста.
  */
 function ProcessGraph() {
+  // Координаты центров, без размеров — ширину/высоту считаем по тексту
   const nodes = [
     // верхний слой: контекст
     {
       id: "igromir",
       x: 40,
-      y: 30,
-      w: 78,
-      h: 18,
+      y: 26,
       label: "ИГРОМИР 2025",
       level: "top"
     },
     {
       id: "brand",
       x: 120,
-      y: 20,
-      w: 138,
-      h: 20,
+      y: 18,
       label: "ЦИФРОВОЙ КРИМИНАЛИСТ",
       level: "top"
     },
     {
       id: "snejinka",
       x: 200,
-      y: 30,
-      w: 124,
-      h: 18,
+      y: 26,
       label: "СТАНЦИЯ «СНЕЖИНКА»",
       level: "top"
     },
@@ -65,27 +60,21 @@ function ProcessGraph() {
     {
       id: "audio",
       x: 40,
-      y: 66,
-      w: 60,
-      h: 16,
+      y: 60,
       label: "АУДИО",
       level: "mid"
     },
     {
       id: "text",
       x: 118,
-      y: 60,
-      w: 60,
-      h: 16,
+      y: 54,
       label: "ТЕКСТ",
       level: "mid"
     },
     {
       id: "meta",
       x: 196,
-      y: 66,
-      w: 84,
-      h: 16,
+      y: 60,
       label: "МЕТАДАННЫЕ",
       level: "mid"
     },
@@ -94,18 +83,14 @@ function ProcessGraph() {
     {
       id: "graphs",
       x: 70,
-      y: 98,
-      w: 96,
-      h: 16,
+      y: 90,
       label: "ГРАФ СВЯЗЕЙ",
       level: "mid2"
     },
     {
       id: "spectra",
       x: 150,
-      y: 98,
-      w: 112,
-      h: 16,
+      y: 90,
       label: "СПЕКТРОГРАММА",
       level: "mid2"
     },
@@ -114,18 +99,14 @@ function ProcessGraph() {
     {
       id: "ui",
       x: 70,
-      y: 128,
-      w: 124,
-      h: 18,
+      y: 122,
       label: "ИНТЕРФЕЙС ИГРОКА",
       level: "bottom"
     },
     {
       id: "dossier",
       x: 150,
-      y: 128,
-      w: 128,
-      h: 18,
+      y: 122,
       label: "ДОСЬЕ / СЦЕНА 01",
       level: "bottom"
     }
@@ -171,11 +152,21 @@ function ProcessGraph() {
     });
   });
 
+  // параметры «прикидочного» размера: шрифт 6px, по 2px воздуха вокруг
+  const fontSize = 6;
+  const paddingX = 6; // слева/справа
+  const paddingY = 2; // сверху/снизу
+  const charWidth = 4; // примерно ширина символа в наших заглавных надписях
+
   const nodeEls = nodes.map((n) => {
-    const rx = n.h / 2; // капсула
-    const ry = n.h / 2;
-    const xRect = n.x - n.w / 2;
-    const yRect = n.y - n.h / 2;
+    const textLen = n.label.length;
+    const w = textLen * charWidth + paddingX * 2;
+    const h = fontSize + paddingY * 2;
+
+    const xRect = n.x - w / 2;
+    const yRect = n.y - h / 2;
+    const rx = h / 2;
+    const ry = h / 2;
 
     return React.createElement(
       "g",
@@ -183,8 +174,8 @@ function ProcessGraph() {
       React.createElement("rect", {
         x: xRect,
         y: yRect,
-        width: n.w,
-        height: n.h,
+        width: w,
+        height: h,
         rx: rx,
         ry: ry,
         className: "pg-node pg-node-" + n.level
@@ -193,8 +184,8 @@ function ProcessGraph() {
         "text",
         {
           x: n.x,
-          y: n.y + 3, // чуть ниже геометрического центра, чтобы оптика была ровной
-          className: "pg-label"
+          y: n.y + 2, // чуть ниже центра для оптики
+          className: "pg-label pg-label-" + n.level
         },
         n.label
       )
@@ -218,7 +209,7 @@ function ProcessGraph() {
     }),
     // лёгкая сетка
     React.createElement("path", {
-      d: "M0 44 H240 M0 86 H240 M0 128 H240",
+      d: "M0 40 H240 M0 82 H240 M0 124 H240",
       className: "pg-grid"
     }),
     React.createElement("path", {
