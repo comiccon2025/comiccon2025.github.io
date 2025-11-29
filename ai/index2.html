@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>NLP Motion Design — 10s Sketch</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    :root {
+      color-scheme: dark;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #020617;
+      color: #e5e7eb;
+      overflow: hidden;
+    }
+    canvas#nlpCanvas {
+      position: fixed;
+      inset: 0;
+      display: block;
+    }
+    .ui {
+      position: absolute;
+      top: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      text-align: center;
+      pointer-events: none;
+      z-index: 2;
+    }
+    .ui h1 {
+      font-size: 18px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      font-weight: 600;
+      color: #e5e7eb;
+      text-shadow: 0 0 24px rgba(56, 189, 248, 0.6);
+    }
+    .ui .subtitle {
+      margin-top: 6px;
+      font-size: 11px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: #9ca3af;
+      opacity: 0.9;
+    }
+    .input-box {
+      position: absolute;
+      left: 8%;
+      bottom: 10%;
+      width: 38%;
+      max-width: 520px;
+      padding: 14px 18px;
+      border-radius: 16px;
+      background:
+        radial-gradient(circle at 0 0, rgba(56, 189, 248, 0.18), transparent 55%),
+        rgba(15, 23, 42, 0.96);
+      border: 1px solid rgba(51, 65, 85, 0.95);
+      box-shadow:
+        0 22px 45px rgba(15, 23, 42, 0.95),
+        0 0 0 1px rgba(15, 23, 42, 0.9);
+      backdrop-filter: blur(18px);
+      pointer-events: none;
+      z-index: 2;
+    }
+    .input-label {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.18em;
+      color: #9ca3af;
+      margin-bottom: 6px;
+    }
+    .input-text {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #e5e7eb;
+      min-height: 1.6em;
+      word-break: break-word;
+    }
+    @media (max-width: 768px) {
+      .ui h1 {
+        font-size: 14px;
+        letter-spacing: 0.12em;
+      }
+      .input-box {
+        left: 6%;
+        right: 6%;
+        width: auto;
+        bottom: 8%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <canvas id="nlpCanvas"></canvas>
+
+  <div class="ui">
+    <h1>NLP PIPELINE</h1>
+    <div class="subtitle">10 second motion sketch</div>
+  </div>
+
+  <div class="input-box">
+    <div class="input-label">Incoming text</div>
+    <div class="input-text" id="typedText"></div>
+  </div>
+
+  <script>
+    (() => {
+      const canvas = document.getElementById('nlpCanvas');
+      const ctx = canvas.getContext('2d');
+      const typedEl = document.getElementById('typedText');
+
+      // Несколько вариантов входного текста для разнообразия
+      const inputVariants = [
+        'How can we ship cocoa from Ghana to Russia with optimal cost and timing?',
+        'What is the best multimodal route for frozen fish from Murmansk to Tema port?',
+        'How do we hedge price risk for a cocoa shipment over the next 6 months?'
+      ];
+
+      const words = ['How', 'can', 'we', 'ship', 'cocoa', 'from', 'Ghana', 'to', 'Russia?'];
+      const tokenObjs = words.map(word => ({ word, baseY: 0 }));
+
+      const embedPoints = Array.from({ length: 80 }, () => ({
+        baseRadius: 25 + Math.random() * 70,
+        angleOffset: Math.random() * Math.PI * 2,
+        orbitSpeed: 0.0006 + Math.random() * 0.0012
+      }));
+
+      const graphNodes = [
+        { label: 'Intent\nplan shipping', xOff: 0, yOff: -90 },
+        { label: 'Entity\nGhana', xOff: -90, yOff: 0 },
+        { label: 'Entity\nCocoa', xOff: 0, yOff: 60 },
+        { label: 'Entity\nRussia', xOff: 90, yOff: 0 },
+        { label: 'Constraint\ncost & time', xOff: 0, yOff: 130 }
+      ];
+
+      const graphEdges = [
+        [0, 1],
+        [0, 2],
+        [0, 3],
+        [0, 4]
+      ];
+
+      const stageX = { input: 0, tokens: 0, embeddings: 0, intent: 0 };
+      const embedCenter = { x: 0, y: 0 };
+      const graphCenter = { x: 0, y: 0 };
+      let baselineY = 0;
+      let width = 0;
+      let height = 0;
+
+      const cycleDuration = 10000; // 10 секунд — один цикл, крутится бесконечно
+
+      function updateLayout() {
+        width = canvas.width = window.innerWidth;
+        height = canvas.height = window.innerHeight;
+
+        stageX.input = width * 0.18;
+        stageX.tokens = width * 0.38;
+        stageX.embeddings = width * 0.6;
+        stageX.intent = width * 0.82;
+
+        baselineY = height * 0.6;
+        const spacing = 26;
+        tokenObjs.forEach((token, i) => {
+          const offset = i - (tokenObjs.length - 1) / 2;
+          token.baseY = baselineY + offset * spacing;
+        });
+
+        embedCenter.x = stageX.embeddings;
+        embedCenter.y = height * 0.35;
+
+        graphCenter.x = stageX.intent;
+        graphCenter.y = height * 0.5;
+      }
+
+      window.addEventListener('resize', updateLayout);
+      updateLayout();
+
+      function drawBackgroundGrid(t, cycleIndex) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(15, 23, 42, 1)';
+        ctx.fillRect(0, 0, width, height);
+
+        const spacing = 56;
+        ctx.strokeStyle = 'rgba(15, 23, 42, 1)';
+        ctx.lineWidth = 1;
+
+        // Статичный грид
+        for (let x = 0; x < width; x += spacing) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, height);
+          ctx.stroke();
+        }
+
+        for (let y = 0; y < height; y += spacing) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(width, y);
+          ctx.stroke();
+        }
+
+        // Цвет акцентной линии меняется от цикла к циклу
+        const accentColors = [
+          'rgba(56, 189, 248, 0.35)',  // cyan
+          'rgba(251, 191, 36, 0.35)',  // amber
+          'rgba(52, 211, 153, 0.35)'   // emerald
+        ];
+        const accent = accentColors[cycleIndex % accentColors.length];
+
+        const pulsePhase = (t % 1200) / 1200;
+        const glowX = width * pulsePhase;
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(glowX, 0);
+        ctx.lineTo(glowX, height);
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      function drawStageConnectors() {
+        ctx.save();
+        const top = height * 0.24;
+        const bottom = height * 0.82;
+        ctx.strokeStyle = 'rgba(30, 64, 175, 0.6)';
+        ctx.setLineDash([4, 10]);
+        ctx.lineWidth = 1;
+
+        Object.values(stageX).forEach(x => {
+          ctx.beginPath();
+          ctx.moveTo(x, top);
+          ctx.lineTo(x, bottom);
+          ctx.stroke();
+        });
+
+        ctx.restore();
+      }
+
+      function drawStageLabels() {
+        ctx.save();
+        const y = height * 0.2;
+        ctx.font = '12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'bottom';
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.95)';
+
+        ctx.fillText('Text input', stageX.input, y);
+        ctx.fillText('Tokenization', stageX.tokens, y);
+        ctx.fillText('Embeddings / attention', stageX.embeddings, y);
+        ctx.fillText('Meaning graph', stageX.intent, y);
+
+        ctx.restore();
+      }
+
+      function drawStatus(t) {
+        ctx.save();
+        let status;
+        if (t < 2000) {
+          status = 'Stage: reading text stream';
+        } else if (t < 4500) {
+          status = 'Stage: tokenizing words and punctuation';
+        } else if (t < 8000) {
+          status = 'Stage: projecting tokens into vectors';
+        } else {
+          status = 'Stage: building semantic graph';
+        }
+
+        ctx.font = '12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.textAlign = 'right';
+        ctx.textBaseline = 'top';
+        ctx.fillStyle = 'rgba(148, 163, 184, 0.9)';
+        ctx.fillText(status, width - 40, 24);
+        ctx.restore();
+      }
+
+      function drawRoundedRectPath(ctx, x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.lineTo(x + w - r, y);
+        ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+        ctx.lineTo(x + w, y + h - r);
+        ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+        ctx.lineTo(x + r, y + h);
+        ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+        ctx.lineTo(x, y + r);
+        ctx.quadraticCurveTo(x, y, x + r, y);
+        ctx.closePath();
+      }
+
+      function drawTokens(t) {
+        if (t < 2200) return;
+        const phase = Math.min((t - 2200) / 2300, 1);
+
+        ctx.save();
+        ctx.font = '14px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        tokenObjs.forEach(token => {
+          const y = token.baseY;
+          const startX = stageX.input;
+          const endX = stageX.tokens;
+          const x = startX + (endX - startX) * phase;
+
+          const boxW = ctx.measureText(token.word).width + 20;
+          const boxH = 24;
+          const rx = x - boxW / 2;
+          const ry = y - boxH / 2;
+
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+          ctx.strokeStyle = 'rgba(56, 189, 248, 0.95)';
+          ctx.lineWidth = 1.4;
+          drawRoundedRectPath(ctx, rx, ry, boxW, boxH, 8);
+          ctx.fill();
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgba(226, 232, 240, 0.98)';
+          ctx.fillText(token.word, x, y);
+        });
+
+        ctx.restore();
+      }
+
+      function drawEmbeddings(t) {
+        if (t < 4500) return;
+        const phase = Math.min((t - 4500) / 3000, 1);
+
+        ctx.save();
+        ctx.globalAlpha = 0.2 + 0.8 * phase;
+
+        embedPoints.forEach((p, i) => {
+          const localT = t - 4500;
+          const angle = p.angleOffset + localT * p.orbitSpeed;
+          const radius = p.baseRadius * phase;
+          const wobble = Math.sin(localT * 0.002 + i) * 3; // лёгкая дрожь радиуса
+          const x = embedCenter.x + Math.cos(angle) * (radius + wobble);
+          const y = embedCenter.y + Math.sin(angle) * (radius + wobble) * 0.6;
+          const size = 3 + (i % 3);
+
+          ctx.beginPath();
+          ctx.arc(x, y, size, 0, Math.PI * 2);
+          ctx.fillStyle = i % 3 === 0
+            ? 'rgba(251, 191, 36, 0.9)'
+            : 'rgba(56, 189, 248, 0.85)';
+          ctx.fill();
+        });
+
+        // лёгкий ореол вокруг центра эмбеддингов
+        const haloPhase = (t % 1200) / 1200;
+        const haloRadius = 90 + Math.sin(haloPhase * Math.PI * 2) * 8;
+        ctx.beginPath();
+        ctx.arc(embedCenter.x, embedCenter.y, haloRadius, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.25)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
+      function drawGraph(t) {
+        if (t < 8000) return;
+        const phase = Math.min((t - 8000) / 2000, 1);
+
+        ctx.save();
+        ctx.globalAlpha = phase;
+
+        const cx = graphCenter.x;
+        const cy = graphCenter.y;
+
+        ctx.strokeStyle = 'rgba(94, 234, 212, 0.9)';
+        ctx.lineWidth = 1.4;
+
+        graphEdges.forEach(([aIndex, bIndex]) => {
+          const a = graphNodes[aIndex];
+          const b = graphNodes[bIndex];
+          const ax = cx + a.xOff;
+          const ay = cy + a.yOff;
+          const bx = cx + b.xOff;
+          const by = cy + b.yOff;
+          ctx.beginPath();
+          ctx.moveTo(ax, ay);
+          ctx.lineTo(bx, by);
+          ctx.stroke();
+        });
+
+        ctx.font = '12px system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        graphNodes.forEach((node, index) => {
+          const x = cx + node.xOff;
+          const y = cy + node.yOff;
+          const r = index === 0 ? 30 : 24;
+
+          ctx.beginPath();
+          ctx.arc(x, y, r, 0, Math.PI * 2);
+          ctx.fillStyle = index === 0
+            ? 'rgba(37, 99, 235, 0.95)'
+            : 'rgba(15, 23, 42, 0.96)';
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(148, 163, 184, 0.9)';
+          ctx.stroke();
+
+          ctx.fillStyle = 'rgba(226, 232, 240, 0.98)';
+          const lines = node.label.split('\n');
+          lines.forEach((line, i) => {
+            const ly = y + (i - (lines.length - 1) / 2) * 13;
+            ctx.fillText(line, x, ly);
+          });
+
+          // пульсация вокруг центрального узла
+          if (index === 0) {
+            const pulse = 1 + Math.sin(t * 0.004) * 0.12;
+            ctx.beginPath();
+            ctx.arc(x, y, r * (1.2 * pulse), 0, Math.PI * 2);
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.35)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+          }
+        });
+
+        ctx.restore();
+      }
+
+      let startTime = null;
+
+      function drawFrame(now) {
+        if (!startTime) startTime = now;
+        const elapsed = now - startTime;
+
+        // Индекс цикла и локальное время внутри цикла
+        const cycleIndex = Math.floor(elapsed / cycleDuration);
+        const t = elapsed % cycleDuration;
+
+        // Выбор текста для текущего цикла
+        const fullText = inputVariants[cycleIndex % inputVariants.length];
+
+        drawBackgroundGrid(t, cycleIndex);
+        drawStageConnectors();
+        drawStageLabels();
+        drawStatus(t);
+
+        // Эффект печати текста — каждый цикл заново
+        const typingProgress = Math.min(t, 2000) / 2000;
+        const charsToShow = Math.floor(fullText.length * typingProgress);
+        typedEl.textContent = fullText.slice(0, charsToShow);
+
+        drawTokens(t);
+        drawEmbeddings(t);
+        drawGraph(t);
+
+        // Бесконечный цикл без пауз
+        requestAnimationFrame(drawFrame);
+      }
+
+      requestAnimationFrame(drawFrame);
+    })();
+  </script>
+</body>
+</html>
