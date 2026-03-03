@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Digital Twins | Snowflake-3826</title>
+    <style>
+        :root {
+            /* Palette VK Play (Основа интерфейса) */
+            --vk-blue: #0077FF;
+            --vk-dark: #19191a;
+            --vk-card: #222223;
+            
+            /* Atomic Heart (Акценты и детали) */
+            --ah-red: #cc0000; /* Звезда / Тревога */
+            --ah-beige: #e5dcc5; /* Цвет полированного бетона и пластика СССР */
+            --ah-gold: #c5a059; /* Золото роботов "Близняшек" */
+            
+            /* Станция Снежинка (Формы и свечение) */
+            --sf-ice: #e3f2fd; /* Ледяной белый */
+            --sf-cyan: #00f2ff; /* Энергия водорода */
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            background-color: var(--vk-dark);
+            color: white;
+            font-family: "VK Sans Display", "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            background-image: 
+                radial-gradient(circle at 90% 10%, rgba(0, 119, 255, 0.1), transparent 40%),
+                radial-gradient(circle at 10% 90%, rgba(204, 0, 0, 0.05), transparent 30%);
+            overflow-x: hidden;
+        }
+
+        /* HEADER: Микс VK Play и Снежинки */
+        header {
+            background: rgba(25, 25, 26, 0.8);
+            backdrop-filter: blur(15px);
+            border-bottom: 1px solid var(--sf-cyan);
+            padding: 15px 40px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-weight: 800;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--sf-ice);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo span { color: var(--ah-red); } /* Элемент Atomic Heart */
+
+        /* СЕТКА ЦИФРОВЫХ ДВОЙНИКОВ (Стиль VK Play) */
+        .container {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 20px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+        }
+
+        /* КАРТОЧКА: База VK Play + футуристичные грани Снежинки + металл Atomic Heart */
+        .twin-card {
+            background: var(--vk-card);
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .twin-card::before {
+            content: "ОБЪЕКТ 3826";
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 10px;
+            color: var(--ah-red);
+            opacity: 0.5;
+            font-weight: bold;
+        }
+
+        .twin-card:hover {
+            transform: translateY(-5px);
+            border-color: var(--sf-cyan);
+            box-shadow: 0 10px 30px rgba(0, 242, 255, 0.2);
+        }
+
+        .card-image {
+            height: 180px;
+            background: linear-gradient(45deg, #111, #333);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 2px solid var(--ah-gold);
+        }
+
+        .card-content {
+            padding: 20px;
+        }
+
+        h2 { font-size: 1.5rem; margin-top: 0; color: var(--sf-ice); }
+
+        /* ИНСТРУКЦИИ (Стиль Atomic Heart: плакатная типографика) */
+        .instruction-badge {
+            display: inline-block;
+            background: var(--ah-red);
+            color: white;
+            padding: 4px 12px;
+            font-weight: bold;
+            font-size: 12px;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            text-transform: uppercase;
+        }
+
+        .status-dot {
+            height: 8px;
+            width: 8px;
+            background-color: var(--sf-cyan);
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+            box-shadow: 0 0 10px var(--sf-cyan);
+        }
+
+        /* КНОПКИ: Геометрия Снежинки, Тень VK Play */
+        .btn {
+            background: var(--vk-blue);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            transition: 0.2s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            background: #2a8dff;
+            filter: brightness(1.1);
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid var(--ah-gold);
+            color: var(--ah-gold);
+            margin-top: 10px;
+        }
+
+        /* Футер в стиле научной лаборатории */
+        footer {
+            margin-top: 100px;
+            padding: 40px;
+            border-top: 1px dashed rgba(255,255,255,0.1);
+            text-align: center;
+            font-size: 12px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="logo">VK Play <span>//</span> SNOWFLAKE 3826</div>
+    <nav style="display: flex; gap: 20px; font-size: 14px;">
+        <a href="#" style="color: var(--sf-cyan); text-decoration: none;">Датчики</a>
+        <a href="#" style="color: white; text-decoration: none;">Протоколы</a>
+        <a href="#" style="color: white; text-decoration: none;">Терминал</a>
+    </nav>
+</header>
+
+<div class="container">
+    <h1 style="border-left: 4px solid var(--ah-red); padding-left: 15px; margin-bottom: 40px;">
+        Цифровые двойники системы Арктика
+    </h1>
+
+    <div class="grid">
+        <!-- Карточка 1 -->
+        <div class="twin-card">
+            <div class="card-image">
+                <!-- Заглушка под визуализацию -->
+                <div style="width: 80px; height: 80px; border: 2px solid var(--sf-cyan); transform: rotate(45deg); display: flex; align-items: center; justify-content: center;">
+                    <div style="width: 40px; height: 40px; background: var(--ah-red); border-radius: 50%;"></div>
+                </div>
+            </div>
+            <div class="card-content">
+                <div class="instruction-badge">Директива №1</div>
+                <h2>Турбина В-01 "Снежинка"</h2>
+                <p style="color: #aaa; font-size: 14px;">Статус: <span class="status-dot"></span> Синхронизировано</p>
+                <button class="btn">Запустить симуляцию</button>
+                <button class="btn btn-secondary">Инструкция ХРАЗа</button>
+            </div>
+        </div>
+
+        <!-- Карточка 2 -->
+        <div class="twin-card">
+            <div class="card-image">
+                <div style="width: 100px; height: 10px; background: var(--sf-cyan); box-shadow: 0 0 20px var(--sf-cyan);"></div>
+            </div>
+            <div class="card-content">
+                <div class="instruction-badge">Секретно</div>
+                <h2>Двойник Рем-модуля</h2>
+                <p style="color: #aaa; font-size: 14px;">Статус: <span class="status-dot" style="background: var(--ah-gold); box-shadow: 0 0 10px var(--ah-gold);"></span> Ожидание</p>
+                <button class="btn">Развернуть модель</button>
+                <button class="btn btn-secondary">Тех. регламент</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<footer>
+    Генерация данных: Станция Снежинка &copy; 2024 | Поддержка VK Play Cloud | Департамент Предприятия 3826
+</footer>
+
+</body>
+</html>
