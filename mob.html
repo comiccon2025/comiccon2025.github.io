@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>МАС «Снежинка» · цифровой двойник · VK Play</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        /* Скрываем скроллбар */
+        ::-webkit-scrollbar {
+            width: 0;
+            background: transparent;
+        }
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0A0C0F;
+            font-family: "Inter", system-ui, -apple-system, sans-serif;
+            color: #E1E3E6;
+            line-height: 1.5;
+            font-size: 15px;
+            font-weight: 400;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Шапка абсолютная поверх hero — прозрачная, три логотипа по краям и центр */
+        .header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            z-index: 30;
+            padding: 24px 32px;
+            background: transparent;
+            border-bottom: none;
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            align-items: center;
+            pointer-events: none;
+        }
+
+        .header-left, .header-center, .header-right {
+            display: flex;
+            align-items: center;
+            pointer-events: auto;
+        }
+
+        .header-left {
+            justify-content: flex-start;
+        }
+
+        .header-center {
+            justify-content: center;
+        }
+
+        .header-right {
+            justify-content: flex-end;
+        }
+
+        .logo-link {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            color: white;
+        }
+
+        .logo-link img {
+            width: 84px;
+            height: 84px;
+            display: block;
+            transition: transform 0.2s;
+        }
+
+        .logo-link img:hover {
+            transform: scale(1.05);
+        }
+
+        .logo-link span {
+            font-size: 36px;
+            font-weight: 700;
+            color: white;
+            letter-spacing: 0.5px;
+            text-shadow: 0 2px 5px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+
+        /* Специально для логотипа МФТИ: адаптивная ширина, увеличена на 50% */
+        .mipt-logo img {
+            width: clamp(120px, 18vw, 280px);
+            height: auto;
+            aspect-ratio: 187 / 56;
+        }
+
+        /* Убираем текст у МФТИ */
+        .mipt-logo span {
+            display: none;
+        }
+
+        /* Hero секция занимает всё доступное место (flex: 1) */
+        .hero {
+            flex: 1;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Фоновые изображения для перехода */
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            transition: opacity 2s ease-in-out;
+            z-index: 1;
+        }
+
+        .hero-bg-1 {
+            background-image: url('https://comiccon2025.github.io/img/snowflake/hero_snow.png');
+            opacity: 1;
+        }
+
+        .hero-bg-2 {
+            background-image: url('https://comiccon2025.github.io/img/snowflake/car.png');
+            opacity: 0;
+        }
+
+        .hero-bg-3 {
+            background-image: url('https://comiccon2025.github.io/img/snowflake/lab.png');
+            opacity: 0;
+        }
+
+        /* Плавающие логотипы (общий контейнер) */
+        .floating-logos {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        .floating-logos img {
+            position: absolute;
+            width: 48px;
+            height: 48px;
+            opacity: 0.4;
+            filter: drop-shadow(0 4px 10px rgba(0,0,0,0.3));
+        }
+
+        /* Разнообразные анимации для плавающих элементов */
+        @keyframes float1 {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            100% { transform: translate(-12px, -18px) rotate(6deg) scale(1.05); }
+        }
+        @keyframes float2 {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            100% { transform: translate(15px, -10px) rotate(-5deg) scale(0.98); }
+        }
+        @keyframes float3 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-8px, 20px) rotate(10deg); }
+        }
+        @keyframes float4 {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            100% { transform: translate(20px, -12px) rotate(-8deg) scale(1.1); }
+        }
+        @keyframes float5 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-18px, 8px) rotate(4deg); }
+        }
+        @keyframes float6 {
+            0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+            100% { transform: translate(10px, 15px) rotate(-3deg) scale(0.95); }
+        }
+        @keyframes float7 {
+            0% { transform: translate(0, 0) rotate(0deg); }
+            100% { transform: translate(-5px, -22px) rotate(7deg); }
+        }
+
+        /* Назначаем каждому логотипу индивидуальную анимацию */
+        .floating-logos img.vk-1 { animation: float1 7.2s infinite alternate ease-in-out; }
+        .floating-logos img.vk-2 { animation: float2 8.5s infinite alternate ease-in-out; }
+        .floating-logos img.vk-3 { animation: float3 6.8s infinite alternate ease-in-out; }
+        .floating-logos img.vk-4 { animation: float4 9s infinite alternate ease-in-out; }
+        .floating-logos img.vk-5 { animation: float5 5.5s infinite alternate ease-in-out; }
+        .floating-logos img.vk-6 { animation: float6 7.9s infinite alternate ease-in-out; }
+        .floating-logos img.vk-7 { animation: float7 8.2s infinite alternate ease-in-out; }
+        .floating-logos img.snow-1 { animation: float2 6.3s infinite alternate ease-in-out; }
+        .floating-logos img.snow-2 { animation: float4 7.7s infinite alternate ease-in-out; }
+        .floating-logos img.snow-3 { animation: float6 9.1s infinite alternate ease-in-out; }
+        .floating-logos img.snow-4 { animation: float1 5.8s infinite alternate ease-in-out; }
+        .floating-logos img.snow-5 { animation: float3 8.9s infinite alternate ease-in-out; }
+        .floating-logos img.snow-6 { animation: float5 6.1s infinite alternate ease-in-out; }
+        .floating-logos img.snow-7 { animation: float7 7.4s infinite alternate ease-in-out; }
+
+        /* Позиции */
+        .floating-logos img.vk-1 { top: 12%; left: 5%; }
+        .floating-logos img.vk-2 { bottom: 18%; right: 7%; width: 64px; height: 64px; opacity: 0.3; }
+        .floating-logos img.vk-3 { top: 25%; right: 15%; opacity: 0.25; width: 40px; height: 40px; }
+        .floating-logos img.vk-4 { bottom: 30%; left: 12%; width: 56px; height: 56px; opacity: 0.35; }
+        .floating-logos img.vk-5 { top: 70%; left: 20%; width: 36px; height: 36px; opacity: 0.45; }
+        .floating-logos img.vk-6 { top: 45%; right: 25%; width: 52px; height: 52px; opacity: 0.3; }
+        .floating-logos img.vk-7 { bottom: 10%; left: 40%; width: 44px; height: 44px; opacity: 0.4; }
+
+        .floating-logos img.snow-1 { top: 15%; right: 8%; width: 50px; height: 50px; opacity: 0.4; }
+        .floating-logos img.snow-2 { bottom: 22%; left: 18%; width: 58px; height: 58px; opacity: 0.3; }
+        .floating-logos img.snow-3 { top: 60%; left: 30%; width: 42px; height: 42px; opacity: 0.35; }
+        .floating-logos img.snow-4 { top: 35%; right: 35%; width: 48px; height: 48px; opacity: 0.45; }
+        .floating-logos img.snow-5 { bottom: 40%; right: 12%; width: 38px; height: 38px; opacity: 0.4; }
+        .floating-logos img.snow-6 { top: 80%; left: 8%; width: 46px; height: 46px; opacity: 0.3; }
+        .floating-logos img.snow-7 { bottom: 8%; right: 30%; width: 54px; height: 54px; opacity: 0.35; }
+
+        /* Футер с иконками — обычный блок */
+        .footer-icons {
+            background-color: #0077ff;
+            padding: 18px 10%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: white;
+            font-size: 16px;
+            font-weight: 500;
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.2);
+            z-index: 20;
+            width: 100%;
+            flex-shrink: 0; /* запрещаем сжиматься */
+        }
+
+        .icon-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+            transition: color 0.2s, transform 0.2s;
+            color: white;
+        }
+
+        .icon-item i {
+            font-size: 36px;
+            filter: drop-shadow(0 2px 5px rgba(0,0,0,0.2));
+        }
+
+        .icon-item span {
+            font-size: 14px;
+            letter-spacing: 0.5px;
+            opacity: 0.95;
+            font-weight: 600;
+        }
+
+        .icon-item:hover {
+            transform: translateY(-3px);
+        }
+
+        /* Планшеты (max-width: 900px) */
+        @media (max-width: 900px) {
+            .header {
+                padding: 16px 20px;
+            }
+            .logo-link img {
+                width: 72px;
+                height: 72px;
+            }
+            .logo-link span {
+                font-size: 28px;
+            }
+            .mipt-logo img {
+                width: clamp(96px, 15vw, 220px);
+            }
+        }
+
+        /* Мобильные (max-width: 700px) */
+        @media (max-width: 700px) {
+            .header {
+                padding: 12px 16px;
+            }
+            .logo-link img {
+                width: 60px;
+                height: 60px;
+            }
+            .logo-link span {
+                font-size: 22px;
+            }
+            .mipt-logo img {
+                width: clamp(80px, 12vw, 160px);
+            }
+            .footer-icons {
+                padding: 12px 5%;
+            }
+            .icon-item i {
+                font-size: 30px;
+            }
+            .icon-item span {
+                font-size: 12px;
+            }
+            /* Прячем VR и PC, оставляем MOBILE, WEB, AR */
+            .footer-icons .icon-item:nth-child(1),
+            .footer-icons .icon-item:nth-child(2) {
+                display: none;
+            }
+            .floating-logos img {
+                width: 30px !important;
+                height: 30px !important;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo-link span {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Шапка: три логотипа (левый, центр, правый) -->
+    <header class="header">
+        <div class="header-left">
+            <a href="https://vkplay.ru/" target="_blank" class="logo-link">
+                <img src="data:image/svg+xml,%3csvg width='36' height='36' viewBox='0 0 36 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cg clip-path='url(%23clip0_124_10523)'%3e%3cpath d='M18.756 0C26.892 0 30.96 0 33.48 2.52C36 5.04 36 9.108 36 17.244V18.756C36 26.892 36 30.96 33.48 33.48C30.96 36 26.892 36 18.756 36H17.244C9.108 36 5.04 36 2.52 33.48C0 30.96 0 26.892 0 18.756V17.244C0 9.108 0 5.04 2.52 2.52C5.04 0 9.108 0 17.244 0H18.756Z' fill='%230077FF'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M35.8956 10.1542C36 12.0999 36 14.4283 36 17.2439V17.244V18.756V18.756C36 20.9229 36 22.8013 35.9524 24.4387H0.0476112C0 22.8013 0 20.9229 0 18.756V17.244C0 14.4283 0 12.0999 0.104447 10.1542H35.8956ZM0.0474971 24.4394L0.0479452 24.4547C4.76004 26.7552 11.0876 28.1568 17.9898 28.1568C24.8976 28.1568 31.2388 26.7487 35.9521 24.4449L35.9522 24.4394H0.0474971Z' fill='%230009B4'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M25.0373 16.5811C24.1462 16.5811 23.4239 17.3195 23.4239 18.2304C23.4239 19.1412 24.1462 19.8796 25.0373 19.8796C25.9284 19.8796 26.6507 19.1412 26.6507 18.2304C26.6507 17.3195 25.9284 16.5811 25.0373 16.5811ZM19.845 18.2304C19.845 15.299 22.1697 12.9227 25.0373 12.9227C27.9049 12.9227 30.2296 15.299 30.2296 18.2304C30.2296 21.1617 27.9049 23.5381 25.0373 23.5381C22.1697 23.5381 19.845 21.1617 19.845 18.2304Z' fill='white'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M11.1827 15.8495L8.48861 13.1555L5.93991 15.7042L8.63398 18.3982L5.94007 21.0921L8.48877 23.6408L11.1827 20.9469L13.8765 23.6408L16.4252 21.0921L13.7314 18.3982L16.4254 15.7042L13.8767 13.1555L11.1827 15.8495Z' fill='white'/%3e%3c/g%3e%3cdefs%3e%3cclipPath id='clip0_124_10523'%3e%3crect width='36' height='36' fill='white'/%3e%3c/clipPath%3e%3c/defs%3e%3c/svg%3e" alt="VK Play" width="84" height="84">
+                <span>VK Play</span>
+            </a>
+        </div>
+        <div class="header-center">
+            <span class="logo-link mipt-logo" style="cursor:default;">
+                <img src="https://comiccon2025.github.io/img/snowflake/mipt.png" alt="МФТИ" width="280" height="auto" style="width: clamp(120px, 18vw, 280px); height: auto;">
+                <span></span>
+            </span>
+        </div>
+        <div class="header-right">
+            <span class="logo-link" style="cursor:default;">
+                <img src="https://comiccon2025.github.io/img/snowflake/logo_2.png" alt="МАС Снежинка" width="84" height="84" onerror="this.style.display='none'; this.parentElement.innerHTML+='<span>❄️ МАС «Снежинка»</span>'">
+                <span>МАС &laquo;Снежинка&raquo;</span>
+            </span>
+        </div>
+    </header>
+
+    <!-- Hero секция с переключающимися фонами (flex: 1) -->
+    <section class="hero">
+        <!-- Три слоя для crossfade -->
+        <div class="hero-bg hero-bg-1"></div>
+        <div class="hero-bg hero-bg-2"></div>
+        <div class="hero-bg hero-bg-3"></div>
+
+        <!-- Плавающие логотипы VK Play и Снежинки -->
+        <div class="floating-logos">
+            <!-- VK Play (7 штук) -->
+            <img src="data:image/svg+xml,%3csvg width='36' height='36' viewBox='0 0 36 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cg clip-path='url(%23clip0_124_10523)'%3e%3cpath d='M18.756 0C26.892 0 30.96 0 33.48 2.52C36 5.04 36 9.108 36 17.244V18.756C36 26.892 36 30.96 33.48 33.48C30.96 36 26.892 36 18.756 36H17.244C9.108 36 5.04 36 2.52 33.48C0 30.96 0 26.892 0 18.756V17.244C0 9.108 0 5.04 2.52 2.52C5.04 0 9.108 0 17.244 0H18.756Z' fill='%230077FF'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M35.8956 10.1542C36 12.0999 36 14.4283 36 17.2439V17.244V18.756V18.756C36 20.9229 36 22.8013 35.9524 24.4387H0.0476112C0 22.8013 0 20.9229 0 18.756V17.244C0 14.4283 0 12.0999 0.104447 10.1542H35.8956ZM0.0474971 24.4394L0.0479452 24.4547C4.76004 26.7552 11.0876 28.1568 17.9898 28.1568C24.8976 28.1568 31.2388 26.7487 35.9521 24.4449L35.9522 24.4394H0.0474971Z' fill='%230009B4'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M25.0373 16.5811C24.1462 16.5811 23.4239 17.3195 23.4239 18.2304C23.4239 19.1412 24.1462 19.8796 25.0373 19.8796C25.9284 19.8796 26.6507 19.1412 26.6507 18.2304C26.6507 17.3195 25.9284 16.5811 25.0373 16.5811ZM19.845 18.2304C19.845 15.299 22.1697 12.9227 25.0373 12.9227C27.9049 12.9227 30.2296 15.299 30.2296 18.2304C30.2296 21.1617 27.9049 23.5381 25.0373 23.5381C22.1697 23.5381 19.845 21.1617 19.845 18.2304Z' fill='white'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M11.1827 15.8495L8.48861 13.1555L5.93991 15.7042L8.63398 18.3982L5.94007 21.0921L8.48877 23.6408L11.1827 20.9469L13.8765 23.6408L16.4252 21.0921L13.7314 18.3982L16.4254 15.7042L13.8767 13.1555L11.1827 15.8495Z' fill='white'/%3e%3c/g%3e%3cdefs%3e%3cclipPath id='clip0_124_10523'%3e%3crect width='36' height='36' fill='white'/%3e%3c/clipPath%3e%3c/defs%3e%3c/svg%3e" alt="VK Play" class="vk-1">
+            <img src="data:image/svg+xml,%3csvg width='36' height='36' viewBox='0 0 36 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cg clip-path='url(%23clip0_124_10523)'%3e%3cpath d='M18.756 0C26.892 0 30.96 0 33.48 2.52C36 5.04 36 9.108 36 17.244V18.756C36 26.892 36 30.96 33.48 33.48C30.96 36 26.892 36 18.756 36H17.244C9.108 36 5.04 36 2.52 33.48C0 30.96 0 26.892 0 18.756V17.244C0 9.108 0 5.04 2.52 2.52C5.04 0 9.108 0 17.244 0H18.756Z' fill='%230077FF'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M35.8956 10.1542C36 12.0999 36 14.4283 36 17.2439V17.244V18.756V18.756C36 20.9229 36 22.8013 35.9524 24.4387H0.0476112C0 22.8013 0 20.9229 0 18.756V17.244C0 14.4283 0 12.0999 0.104447 10.1542H35.8956ZM0.0474971 24.4394L0.0479452 24.4547C4.76004 26.7552 11.0876 28.1568 17.9898 28.1568C24.8976 28.1568 31.2388 26.7487 35.9521 24.4449L35.9522 24.4394H0.0474971Z' fill='%230009B4'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M25.0373 16.5811C24.1462 16.5811 23.4239 17.3195 23.4239 18.2304C23.4239 19.1412 24.1462 19.8796 25.0373 19.8796C25.9284 19.8796 26.6507 19.1412 26.6507 18.2304C26.6507 17.3195 25.9284 16.5811 25.0373 16.5811ZM19.845 18.2304C19.845 15.299 22.1697 12.9227 25.0373 12.9227C27.9049 12.9227 30.2296 15.299 30.2296 18.2304C30.2296 21.1617 27.9049 23.5381 25.0373 23.5381C22.1697 23.5381 19.845 21.1617 19.845 18.2304Z' fill='white'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M11.1827 15.8495L8.48861 13.1555L5.93991 15.7042L8.63398 18.3982L5.94007 21.0921L8.48877 23.6408L11.1827 20.9469L13.8765 23.6408L16.4252 21.0921L13.7314 18.3982L16.4254 15.7042L13.8767 13.1555L11.1827 15.8495Z' fill='white'/%3e%3c/g%3e%3cdefs%3e%3cclipPath id='clip0_124_10523'%3e%3crect width='36' height='36' fill='white'/%3e%3c/clipPath%3e%3c/defs%3e%3c/svg%3e" alt="VK Play" class="vk-2">
+            <img src="data:image/svg+xml,%3csvg width='36' height='36' viewBox='0 0 36 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cg clip-path='url(%23clip0_124_10523)'%3e%3cpath d='M18.756 0C26.892 0 30.96 0 33.48 2.52C36 5.04 36 9.108 36 17.244V18.756C36 26.892 36 30.96 33.48 33.48C30.96 36 26.892 36 18.756 36H17.244C9.108 36 5.04 36 2.52 33.48C0 30.96 0 26.892 0 18.756V17.244C0 9.108 0 5.04 2.52 2.52C5.04 0 9.108 0 17.244 0H18.756Z' fill='%230077FF'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M35.8956 10.1542C36 12.0999 36 14.4283 36 17.2439V17.244V18.756V18.756C36 20.9229 36 22.8013 35.9524 24.4387H0.0476112C0 22.8013 0 20.9229 0 18.756V17.244C0 14.4283 0 12.0999 0.104447 10.1542H35.8956ZM0.0474971 24.4394L0.0479452 24.4547C4.76004 26.7552 11.0876 28.1568 17.9898 28.1568C24.8976 28.1568 31.2388 26.7487 35.9521 24.4449L35.9522 24.4394H0.0474971Z' fill='%230009B4'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M25.0373 16.5811C24.1462 16.5811 23.4239 17.3195 23.4239 18.2304C23.4239 19.1412 24.1462 19.8796 25.0373 19.8796C25.9284 19.8796 26.6507 19.1412 26.6507 18.2304C26.6507 17.3195 25.9284 16.5811 25.0373 16.5811ZM19.845 18.2304C19.845 15.299 22.1697 12.9227 25.0373 12.9227C27.9049 12.9227 30.2296 15.299 30.2296 18.2304C30.2296 21.1617 27.9049 23.5381 25.0373 23.5381C22.1697 23.5381 19.845 21.1617 19.845 18.2304Z' fill='white'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M11.1827 15.8495L8.48861 13.1555L5.93991 15.7042L8.63398 18.3982L5.94007 21.0921L8.48877 23.6408L11.1827 20.9469L13.8765 23.6408L16.4252 21.0921L13.7314 18.3982L16.4254 15.7042L13.8767 13.1555L11.1827 15.8495Z' fill='white'/%3e%3c/g%3e%3cdefs%3e%3cclipPath id='clip0_124_10523'%3e%3crect width='36' height='36' fill='white'/%3e%3c/clipPath%3e%3c/defs%3e%3c/svg%3e" alt="VK Play" class="vk-3">
+            <img src="data:image/svg+xml,%3csvg width='36' height='36' viewBox='0 0 36 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cg clip-path='url(%23clip0_124_10523)'%3e%3cpath d='M18.756 0C26.892 0 30.96 0 33.48 2.52C36 5.04 36 9.108 36 17.244V18.756C36 26.892 36 30.96 33.48 33.48C30.96 36 26.892 36 18.756 36H17.244C9.108 36 5.04 36 2.52 33.48C0 30.96 0 26.892 0 18.756V17.244C0 9.108 0 5.04 2.52 2.52C5.04 0 9.108 0 17.244 0H18.756Z' fill='%230077FF'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M35.8956 10.1542C36 12.0999 36 14.4283 36 17.2439V17.244V18.756V18.756C36 20.9229 36 22.8013 35.9524 24.4387H0.0476112C0 22.8013 0 20.9229 0 18.756V17.244C0 14.4283 0 12.0999 0.104447 10.1542H35.8956ZM0.0474971 24.4394L0.0479452 24.4547C4.76004 26.7552 11.0876 28.1568 17.9898 28.1568C24.8976 28.1568 31.2388 26.7487 35.9521 24.4449L35.9522 24.4394H0.0474971Z' fill='%230009B4'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M25.0373 16.5811C24.1462 16.5811 23.4239 17.3195 23.4239 18.2304C23.4239 19.1412 24.1462 19.8796 25.0373 19.8796C25.9284 19.8796 26.6507 19.1412 26.6507 18.2304C26.6507 17.3195 25.9284 16.5811 25.0373 16.5811ZM19.845 18.2304C19.845 15.299 22.1697 12.9227 25.0373 12.9227C27.9049 12.9227 30.2296 15.299 30.2296 18.2304C30.2296 21.1617 27.9049 23.5381 25.0373 23.5381C22.1697 23.5381 19.845 21.1617 19.845 18.2304Z' fill='white'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M11.1827 15.8495L8.48861 13.1555L5.93991 15.7042L8.63398 18.3982L5.94007 21.0921L8.48877 23.6408L11.1827 20.9469L13.8765 23.6408L16.4252 21.0921L13.7314 18.3982L16.4254 15.7042L13.8767 13.1555L11.1827 15.8495Z' fill='white'/%3e%3c/g%3e%3cdefs%3e%3cclipPath id='clip0_124_10523'%3e%3crect width='36' height='36' fill='white'/%3e%3c/clipPath%3e%3c/defs%3e%3c/svg%3e" alt="VK Play" class="vk-4">
+            <img src="data:image/svg+xml,%3csvg width='36' height='36' viewBox='0 0 36 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cg clip-path='url(%23clip0_124_10523)'%3e%3cpath d='M18.756 0C26.892 0 30.96 0 33.48 2.52C36 5.04 36 9.108 36 17.244V18.756C36 26.892 36 30.96 33.48 33.48C30.96 36 26.892 36 18.756 36H17.244C9.108 36 5.04 36 2.52 33.48C0 30.96 0 26.892 0 18.756V17.244C0 9.108 0 5.04 2.52 2.52C5.04 0 9.108 0 17.244 0H18.756Z' fill='%230077FF'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M35.8956 10.1542C36 12.0999 36 14.4283 36 17.2439V17.244V18.756V18.756C36 20.9229 36 22.8013 35.9524 24.4387H0.0476112C0 22.8013 0 20.9229 0 18.756V17.244C0 14.4283 0 12.0999 0.104447 10.1542H35.8956ZM0.0474971 24.4394L0.0479452 24.4547C4.76004 26.7552 11.0876 28.1568 17.9898 28.1568C24.8976 28.1568 31.2388 26.7487 35.9521 24.4449L35.9522 24.4394H0.0474971Z' fill='%230009B4'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M25.0373 16.5811C24.1462 16.5811 23.4239 17.3195 23.4239 18.2304C23.4239 19.1412 24.1462 19.8796 25.0373 19.8796C25.9284 19.8796 26.6507 19.1412 26.6507 18.2304C26.6507 17.3195 25.9284 16.5811 25.0373 16.5811ZM19.845 18.2304C19.845 15.299 22.1697 12.9227 25.0373 12.9227C27.9049 12.9227 30.2296 15.299 30.2296 18.2304C30.2296 21.1617 27.9049 23.5381 25.0373 23.5381C22.1697 23.5381 19.845 21.1617 19.845 18.2304Z' fill='white'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M11.1827 15.8495L8.48861 13.1555L5.93991 15.7042L8.63398 18.3982L5.94007 21.0921L8.48877 23.6408L11.1827 20.9469L13.8765 23.6408L16.4252 21.0921L13.7314 18.3982L16.4254 15.7042L13.8767 13.1555L11.1827 15.8495Z' fill='white'/%3e%3c/g%3e%3cdefs%3e%3cclipPath id='clip0_124_10523'%3e%3crect width='36' height='36' fill='white'/%3e%3c/clipPath%3e%3c/defs%3e%3c/svg%3e" alt="VK Play" class="vk-5">
+            <img src="data:image/svg+xml,%3csvg width='36' height='36' viewBox='0 0 36 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cg clip-path='url(%23clip0_124_10523)'%3e%3cpath d='M18.756 0C26.892 0 30.96 0 33.48 2.52C36 5.04 36 9.108 36 17.244V18.756C36 26.892 36 30.96 33.48 33.48C30.96 36 26.892 36 18.756 36H17.244C9.108 36 5.04 36 2.52 33.48C0 30.96 0 26.892 0 18.756V17.244C0 9.108 0 5.04 2.52 2.52C5.04 0 9.108 0 17.244 0H18.756Z' fill='%230077FF'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M35.8956 10.1542C36 12.0999 36 14.4283 36 17.2439V17.244V18.756V18.756C36 20.9229 36 22.8013 35.9524 24.4387H0.0476112C0 22.8013 0 20.9229 0 18.756V17.244C0 14.4283 0 12.0999 0.104447 10.1542H35.8956ZM0.0474971 24.4394L0.0479452 24.4547C4.76004 26.7552 11.0876 28.1568 17.9898 28.1568C24.8976 28.1568 31.2388 26.7487 35.9521 24.4449L35.9522 24.4394H0.0474971Z' fill='%230009B4'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M25.0373 16.5811C24.1462 16.5811 23.4239 17.3195 23.4239 18.2304C23.4239 19.1412 24.1462 19.8796 25.0373 19.8796C25.9284 19.8796 26.6507 19.1412 26.6507 18.2304C26.6507 17.3195 25.9284 16.5811 25.0373 16.5811ZM19.845 18.2304C19.845 15.299 22.1697 12.9227 25.0373 12.9227C27.9049 12.9227 30.2296 15.299 30.2296 18.2304C30.2296 21.1617 27.9049 23.5381 25.0373 23.5381C22.1697 23.5381 19.845 21.1617 19.845 18.2304Z' fill='white'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M11.1827 15.8495L8.48861 13.1555L5.93991 15.7042L8.63398 18.3982L5.94007 21.0921L8.48877 23.6408L11.1827 20.9469L13.8765 23.6408L16.4252 21.0921L13.7314 18.3982L16.4254 15.7042L13.8767 13.1555L11.1827 15.8495Z' fill='white'/%3e%3c/g%3e%3cdefs%3e%3cclipPath id='clip0_124_10523'%3e%3crect width='36' height='36' fill='white'/%3e%3c/clipPath%3e%3c/defs%3e%3c/svg%3e" alt="VK Play" class="vk-6">
+            <img src="data:image/svg+xml,%3csvg width='36' height='36' viewBox='0 0 36 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cg clip-path='url(%23clip0_124_10523)'%3e%3cpath d='M18.756 0C26.892 0 30.96 0 33.48 2.52C36 5.04 36 9.108 36 17.244V18.756C36 26.892 36 30.96 33.48 33.48C30.96 36 26.892 36 18.756 36H17.244C9.108 36 5.04 36 2.52 33.48C0 30.96 0 26.892 0 18.756V17.244C0 9.108 0 5.04 2.52 2.52C5.04 0 9.108 0 17.244 0H18.756Z' fill='%230077FF'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M35.8956 10.1542C36 12.0999 36 14.4283 36 17.2439V17.244V18.756V18.756C36 20.9229 36 22.8013 35.9524 24.4387H0.0476112C0 22.8013 0 20.9229 0 18.756V17.244C0 14.4283 0 12.0999 0.104447 10.1542H35.8956ZM0.0474971 24.4394L0.0479452 24.4547C4.76004 26.7552 11.0876 28.1568 17.9898 28.1568C24.8976 28.1568 31.2388 26.7487 35.9521 24.4449L35.9522 24.4394H0.0474971Z' fill='%230009B4'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M25.0373 16.5811C24.1462 16.5811 23.4239 17.3195 23.4239 18.2304C23.4239 19.1412 24.1462 19.8796 25.0373 19.8796C25.9284 19.8796 26.6507 19.1412 26.6507 18.2304C26.6507 17.3195 25.9284 16.5811 25.0373 16.5811ZM19.845 18.2304C19.845 15.299 22.1697 12.9227 25.0373 12.9227C27.9049 12.9227 30.2296 15.299 30.2296 18.2304C30.2296 21.1617 27.9049 23.5381 25.0373 23.5381C22.1697 23.5381 19.845 21.1617 19.845 18.2304Z' fill='white'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M11.1827 15.8495L8.48861 13.1555L5.93991 15.7042L8.63398 18.3982L5.94007 21.0921L8.48877 23.6408L11.1827 20.9469L13.8765 23.6408L16.4252 21.0921L13.7314 18.3982L16.4254 15.7042L13.8767 13.1555L11.1827 15.8495Z' fill='white'/%3e%3c/g%3e%3cdefs%3e%3cclipPath id='clip0_124_10523'%3e%3crect width='36' height='36' fill='white'/%3e%3c/clipPath%3e%3c/defs%3e%3c/svg%3e" alt="VK Play" class="vk-7">
+
+            <!-- Снежинка логотипы (7 штук) -->
+            <img src="https://comiccon2025.github.io/img/snowflake/logo_2.png" alt="Снежинка" class="snow-1">
+            <img src="https://comiccon2025.github.io/img/snowflake/logo_2.png" alt="Снежинка" class="snow-2">
+            <img src="https://comiccon2025.github.io/img/snowflake/logo_2.png" alt="Снежинка" class="snow-3">
+            <img src="https://comiccon2025.github.io/img/snowflake/logo_2.png" alt="Снежинка" class="snow-4">
+            <img src="https://comiccon2025.github.io/img/snowflake/logo_2.png" alt="Снежинка" class="snow-5">
+            <img src="https://comiccon2025.github.io/img/snowflake/logo_2.png" alt="Снежинка" class="snow-6">
+            <img src="https://comiccon2025.github.io/img/snowflake/logo_2.png" alt="Снежинка" class="snow-7">
+        </div>
+    </section>
+
+    <!-- Футер с иконками VR, PC, MOBILE, WEB, AR -->
+    <div class="footer-icons">
+        <div class="icon-item"><i class="fas fa-vr-cardboard"></i><span>VR</span></div>
+        <div class="icon-item"><i class="fas fa-desktop"></i><span>PC</span></div>
+        <div class="icon-item"><i class="fas fa-mobile-alt"></i><span>MOBILE</span></div>
+        <div class="icon-item"><i class="fas fa-globe"></i><span>WEB</span></div>
+        <div class="icon-item"><i class="fas fa-glasses"></i><span>AR</span></div>
+    </div>
+
+    <script>
+        (function() {
+            // Crossfade between three background images
+            const bg1 = document.querySelector('.hero-bg-1');
+            const bg2 = document.querySelector('.hero-bg-2');
+            const bg3 = document.querySelector('.hero-bg-3');
+            const backgrounds = [bg1, bg2, bg3];
+            let currentIndex = 0;
+
+            // Set initial opacity
+            backgrounds.forEach((bg, index) => {
+                bg.style.opacity = index === 0 ? '1' : '0';
+            });
+
+            setInterval(() => {
+                const nextIndex = (currentIndex + 1) % backgrounds.length;
+                
+                // Fade out current, fade in next
+                backgrounds[currentIndex].style.opacity = '0';
+                backgrounds[nextIndex].style.opacity = '1';
+                
+                currentIndex = nextIndex;
+            }, 25000); // switch every 25 seconds (в 5 раз медленнее)
+        })();
+    </script>
+</body>
+</html>
