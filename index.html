@@ -150,6 +150,11 @@
             opacity: 0;
         }
 
+        .hero-bg-4 {
+            background-image: url('https://comiccon2025.github.io/img/room/room_plants_3.png');
+            opacity: 0;
+        }
+
         /* Плавающие логотипы (общий контейнер) */
         .floating-logos {
             position: absolute;
@@ -400,7 +405,8 @@
             const bg1 = document.querySelector('.hero-bg-1');
             const bg2 = document.querySelector('.hero-bg-2');
             const bg3 = document.querySelector('.hero-bg-3');
-            const backgrounds = [bg1, bg2, bg3];
+            const bg3 = document.querySelector('.hero-bg-4');
+            const backgrounds = [bg1, bg2, bg3,bg4];
             let currentIndex = 0;
 
             // Set initial opacity
