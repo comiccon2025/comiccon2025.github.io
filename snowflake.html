@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>МАС «Снежинка» · цифровой двойник · VK Play</title>
+    <!-- VK Play style: тёмная тема, шрифт Inter + Font Awesome -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #0A0C0F;
+            font-family: "Inter", system-ui, -apple-system, sans-serif;
+            color: #E1E3E6;
+            line-height: 1.5;
+            font-size: 15px;
+            font-weight: 400;
+        }
+
+        .wrapper {
+            max-width: 1280px;
+            margin: 0 auto;
+            padding: 0 24px;
+        }
+
+        /* ---------- шапка с логотипами горизонтально ---------- */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 0;
+            border-bottom: 1px solid #2A2E36;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            flex-wrap: wrap;
+        }
+
+        .logo-row {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .logo-row a {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 600;
+            font-size: 20px;
+            color: white;
+            text-decoration: none;
+        }
+
+        .logo-row img {
+            display: block;
+            width: 36px;
+            height: 36px;
+            aspect-ratio: auto 36 / 36;
+            cursor: pointer;
+            border-radius: 0;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 24px;
+        }
+
+        .nav-links a {
+            color: #A3A7B0;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 14px;
+            transition: color 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-links a:hover {
+            color: white;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .search-btn {
+            background: none;
+            border: none;
+            color: #A3A7B0;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .avatar {
+            width: 36px;
+            height: 36px;
+            background: #2A2E36;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            color: white;
+            cursor: default;
+        }
+
+        /* ---------- хлебные крошки ---------- */
+        .breadcrumbs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 20px 0 12px;
+            font-size: 13px;
+            color: #6F737E;
+        }
+
+        .breadcrumbs a {
+            color: #A3A7B0;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .breadcrumbs a:hover {
+            color: white;
+        }
+
+        .breadcrumbs .separator {
+            color: #3F434C;
+        }
+
+        /* ---------- главный блок игры ---------- */
+        .game-hero {
+            display: flex;
+            gap: 32px;
+            margin-bottom: 32px;
+            flex-wrap: wrap;
+        }
+
+        .game-cover {
+            flex: 0 0 475px;
+            height: 400px;
+            background: #1F2228;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 20px 35px -8px rgba(0, 0, 0, 0.8);
+            border: 1px solid #2F333C;
+        }
+
+        .game-cover img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .game-info {
+            flex: 1;
+            min-width: 280px;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .game-title {
+            font-size: 42px;
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: -0.02em;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, #fff 0%, #B0C4F0 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .game-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 24px;
+            margin-bottom: 24px;
+            color: #A3A7B0;
+            font-size: 14px;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .meta-item .badge {
+            background: #2A2E36;
+            padding: 4px 10px;
+            border-radius: 30px;
+            color: white;
+            font-weight: 500;
+        }
+
+        .price-block {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .price {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border-radius: 40px;
+            font-weight: 600;
+            font-size: 15px;
+            border: none;
+            transition: 0.1s ease;
+            background: #2A2E36;
+            color: white;
+            text-decoration: none;
+            display: inline-block;
+            cursor: pointer;
+        }
+
+        .btn-primary {
+            background: #3C6CE7;
+            color: white;
+            box-shadow: 0 4px 12px rgba(60, 108, 231, 0.3);
+        }
+
+        .btn-primary:hover {
+            background: #4f7cf0;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            border: 1px solid #3F434C;
+            cursor: default;
+            opacity: 0.7;
+        }
+
+        /* ---------- табы ---------- */
+        .tabs {
+            display: flex;
+            gap: 2px;
+            border-bottom: 1px solid #2A2E36;
+            margin: 32px 0 0;
+        }
+
+        .tab {
+            padding: 12px 20px;
+            font-weight: 500;
+            color: #A3A7B0;
+            border-bottom: 2px solid transparent;
+            cursor: default;
+        }
+
+        .tab.active {
+            color: white;
+            border-bottom: 2px solid #3C6CE7;
+        }
+
+        /* ---------- основной контент ---------- */
+        .content-grid {
+            display: flex;
+            gap: 32px;
+            margin: 24px 0 48px;
+            flex-wrap: wrap;
+        }
+
+        .content-main {
+            flex: 2;
+            min-width: 300px;
+        }
+
+        .content-side {
+            flex: 1;
+            min-width: 260px;
+        }
+
+        .card {
+            background: #14171C;
+            border-radius: 24px;
+            border: 1px solid #262A32;
+            padding: 28px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .card h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: white;
+            letter-spacing: -0.3px;
+        }
+
+        .card h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 24px 0 12px;
+            color: #D9DDE3;
+        }
+
+        .card h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin: 20px 0 10px;
+            color: #E1E3E6;
+        }
+
+        .card p {
+            margin-bottom: 16px;
+            color: #B0B5BD;
+            font-size: 15px;
+        }
+
+        .card ul, .card ol {
+            margin: 12px 0 20px 24px;
+            color: #B0B5BD;
+        }
+
+        .card li {
+            margin-bottom: 8px;
+        }
+
+        .card code, .tech-term {
+            background: #1E2229;
+            padding: 2px 8px;
+            border-radius: 30px;
+            font-family: 'Inter', monospace;
+            font-size: 13px;
+            color: #9BB7FF;
+            border: 1px solid #2F353F;
+            white-space: nowrap;
+        }
+
+        .tech-block {
+            background: #1A1E24;
+            border-left: 3px solid #3C6CE7;
+            padding: 16px 20px;
+            border-radius: 12px;
+            margin: 20px 0;
+            font-size: 14px;
+        }
+
+        .divider {
+            height: 1px;
+            background: #262A32;
+            margin: 24px 0;
+        }
+
+        .info-list {
+            list-style: none;
+            margin: 0;
+        }
+
+        .info-list li {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #262A32;
+            font-size: 14px;
+        }
+
+        .info-list li:last-child {
+            border-bottom: none;
+        }
+
+        .info-label {
+            color: #767C89;
+        }
+
+        .info-value {
+            color: white;
+            font-weight: 500;
+            text-align: right;
+        }
+
+        .system-req {
+            background: #1A1E24;
+            border-radius: 16px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .system-req p {
+            margin-bottom: 8px;
+        }
+
+        .footer {
+            padding: 32px 0 40px;
+            border-top: 1px solid #262A32;
+            display: flex;
+            justify-content: space-between;
+            color: #6F737E;
+            font-size: 13px;
+            flex-wrap: wrap;
+            gap: 16px;
+        }
+
+        .footer-links {
+            display: flex;
+            gap: 28px;
+        }
+
+        .footer-links a {
+            color: #A3A7B0;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        .footer-links a:hover {
+            color: white;
+        }
+
+        .note {
+            background: #1F2530;
+            border-radius: 12px;
+            padding: 16px 20px;
+            color: #BCC1CC;
+            border: 1px solid #2F3745;
+            font-style: italic;
+            margin: 16px 0;
+        }
+
+        .inline-image {
+            margin: 24px 0;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid #2F333C;
+            background: #1A1E24;
+            max-width: 100%;
+        }
+
+        .inline-image img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .image-row {
+            display: flex;
+            gap: 16px;
+            margin: 24px 0;
+            flex-wrap: wrap;
+        }
+
+        .image-row .inline-image {
+            flex: 1 1 200px;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="wrapper">
+        <!-- Header VK Play с двумя логотипами горизонтально -->
+        <header class="header">
+            <div class="header-left">
+                <!-- Логотип VK Play -->
+                <div class="logo-row">
+                    <a href="https://vkplay.ru/" target="_blank">
+                        <img src="data:image/svg+xml,%3csvg width='36' height='36' viewBox='0 0 36 36' fill='none' xmlns='http://www.w3.org/2000/svg'%3e%3cg clip-path='url(%23clip0_124_10523)'%3e%3cpath d='M18.756 0C26.892 0 30.96 0 33.48 2.52C36 5.04 36 9.108 36 17.244V18.756C36 26.892 36 30.96 33.48 33.48C30.96 36 26.892 36 18.756 36H17.244C9.108 36 5.04 36 2.52 33.48C0 30.96 0 26.892 0 18.756V17.244C0 9.108 0 5.04 2.52 2.52C5.04 0 9.108 0 17.244 0H18.756Z' fill='%230077FF'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M35.8956 10.1542C36 12.0999 36 14.4283 36 17.2439V17.244V18.756V18.756C36 20.9229 36 22.8013 35.9524 24.4387H0.0476112C0 22.8013 0 20.9229 0 18.756V17.244C0 14.4283 0 12.0999 0.104447 10.1542H35.8956ZM0.0474971 24.4394L0.0479452 24.4547C4.76004 26.7552 11.0876 28.1568 17.9898 28.1568C24.8976 28.1568 31.2388 26.7487 35.9521 24.4449L35.9522 24.4394H0.0474971Z' fill='%230009B4'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M25.0373 16.5811C24.1462 16.5811 23.4239 17.3195 23.4239 18.2304C23.4239 19.1412 24.1462 19.8796 25.0373 19.8796C25.9284 19.8796 26.6507 19.1412 26.6507 18.2304C26.6507 17.3195 25.9284 16.5811 25.0373 16.5811ZM19.845 18.2304C19.845 15.299 22.1697 12.9227 25.0373 12.9227C27.9049 12.9227 30.2296 15.299 30.2296 18.2304C30.2296 21.1617 27.9049 23.5381 25.0373 23.5381C22.1697 23.5381 19.845 21.1617 19.845 18.2304Z' fill='white'/%3e%3cpath fill-rule='evenodd' clip-rule='evenodd' d='M11.1827 15.8495L8.48861 13.1555L5.93991 15.7042L8.63398 18.3982L5.94007 21.0921L8.48877 23.6408L11.1827 20.9469L13.8765 23.6408L16.4252 21.0921L13.7314 18.3982L16.4254 15.7042L13.8767 13.1555L11.1827 15.8495Z' fill='white'/%3e%3c/g%3e%3cdefs%3e%3cclipPath id='clip0_124_10523'%3e%3crect width='36' height='36' fill='white'/%3e%3c/clipPath%3e%3c/defs%3e%3c/svg%3e" alt="VK Play" width="36" height="36">
+                        <span>VK Play</span>
+                    </a>
+                </div>
+                <!-- Логотип МАС «Снежинка» -->
+                <div class="logo-row">
+                    <a href="#" style="cursor:default;">
+                        <img src="https://comiccon2025.github.io/img/snowflake/logo_2.png" alt="МАС Снежинка" width="36" height="36" onerror="this.style.display='none'; this.parentElement.innerHTML+='<span style=\'margin-left:6px;\'>❄️ МАС «Снежинка»</span>'">
+                        <span>МАС «Снежинка»</span>
+                    </a>
+                </div>
+                <!-- Навигационные ссылки -->
+                <nav class="nav-links">
+                    <a href="https://vkplay.ru/" target="_blank">Магазин</a>
+                    <a href="https://live.vkplay.ru/" target="_blank">Трансляции</a>
+                    <a href="https://vkplay.ru/plus/" target="_blank">Подписка</a>
+                    <a href="https://vkplay.ru/support/" target="_blank">Поддержка</a>
+                </nav>
+            </div>
+            <div class="header-right">
+                <button class="search-btn" aria-label="Поиск"><i class="fas fa-search"></i></button>
+                <div class="avatar"><i class="fas fa-user"></i></div>
+            </div>
+        </header>
+
+        <!-- Breadcrumbs -->
+        <div class="breadcrumbs">
+            <a href="https://vkplay.ru/" target="_blank">VK Play</a> <span class="separator">›</span>
+            <a href="https://vkplay.ru/" target="_blank">Магазин</a> <span class="separator">›</span>
+            <a href="https://vkplay.ru/catalog/games" target="_blank">Игры</a> <span class="separator">›</span>
+            <span style="color: #E1E3E6;">МАС «Снежинка»</span>
+        </div>
+
+        <!-- Hero: обложка + основная информация -->
+        <div class="game-hero">
+            <div class="game-cover">
+                <img src="https://comiccon2025.github.io/img/snowflake/hero_snow.png" alt="МАС Снежинка обложка" onerror="this.style.display='none'; this.parentElement.innerHTML='<div class=\'cover-placeholder\' style=\'display:flex;align-items:center;justify-content:center;height:100%;\'><span style=\'font-size:24px;font-weight:600;\'>❄️ МАС «Снежинка»</span></div>'">
+            </div>
+            <div class="game-info">
+                <h1 class="game-title">МАС «Снежинка»</h1>
+                <div class="game-meta">
+                    <div class="meta-item"><span class="badge">Симулятор</span></div>
+                    <div class="meta-item"><span class="badge">Цифровой двойник</span></div>
+                    <div class="meta-item"><span class="badge">Научная фантастика</span></div>
+                    <div class="meta-item"><i class="far fa-calendar-alt"></i> 2026</div>
+                    <div class="meta-item"><i class="fas fa-microchip"></i> VK Play Digital</div>
+                </div>
+                <div class="price-block">
+                    <div class="price">Подписка VK Play</div>
+                    <div class="buttons">
+                        <a href="#" class="btn btn-primary">Играть</a>
+                        <button class="btn btn-secondary" disabled>В библиотеку</button>
+                    </div>
+                </div>
+                <!-- Эксклюзивный блок VR/PC/WEB + мультиплеер -->
+                <div style="margin-top: 16px; display: flex; gap: 16px; flex-wrap: wrap; align-items: center;">
+                    <span class="tech-term"><i class="fas fa-vr-cardboard"></i> VR</span>
+                    <span class="tech-term"><i class="fas fa-desktop"></i> PC</span>
+                    <span class="tech-term"><i class="fas fa-globe"></i> WEB</span>
+                    <span class="tech-term"><i class="fas fa-users"></i> мультиплеер (техника)</span>
+                    <span class="tech-term"><i class="fas fa-star"></i> авторские уровни</span>
+                </div>
+                <div style="margin-top: 12px; color: #767C89; font-size: 14px;">Эксклюзивно для пользователей VK Play</div>
+            </div>
+        </div>
+
+        <!-- Табы -->
+        <div class="tabs">
+            <span class="tab active">Описание</span>
+            <span class="tab">Системные требования</span>
+            <span class="tab">Новости</span>
+            <span class="tab">Обсуждения</span>
+            <span class="tab">Поддержка</span>
+        </div>
+
+        <!-- Основной контент: детальное описание цифрового двойника -->
+        <div class="content-grid">
+            <div class="content-main">
+                <div class="card">
+                    <h2 style="display: flex; align-items: center; gap: 8px;">
+                        <i class="fas fa-snowflake" style="color: #3C6CE7;"></i> Цифровой двойник МАС «Снежинка» — реальность с точностью до сантиметра
+                        <span class="tech-term" style="font-size: 14px;">VK Play Digital</span>
+                    </h2>
+                    <div class="tech-block">
+                        <p style="margin-bottom: 0;"><strong>Игра на основе цифрового двойника Международной научной станции «Снежинка».</strong> Виртуальная копия, построенная по данным фотограмметрии и геодезического сканирования, позволит вам испытать реальную работу научного оборудования стран-участниц проекта. Каждая деталь — от структуры льда до расположения модулей — воссоздана с точностью от 1 до 3 сантиметров.</p>
+                    </div>
+                    <p>Проект реализован как импортонезависимый цифровой двойник для платформы VK Play. Мы объединили промышленные БПЛА с 8K-сенсорами, панорамные камеры профессионального класса и спутниковые снимки группировки «Канопус-В». Геодезическая привязка через GNSS-приемники (ГЛОНАСС) в режиме RTK обеспечила субдециметровую точность рельефа. Результат — полная копия местности, где каждый микрорельеф влияет на физику движения вездеходов, сноубайков и расчёт зон покрытия связи.</p>
+
+                    <!-- Динамическая смена погоды и времени суток -->
+                    <p><i class="fas fa-cloud-sun"></i> <strong>Динамическая смена погоды и времени суток</strong> — бураны, полярная ночь, северное сияние — всё это меняет геймплей и требует адаптации.</p>
+
+                    <h3 style="margin-top: 30px;">🪐 Ключевые зоны станции</h3>
+
+                    <h4><i class="fas fa-bolt"></i> 1. Зона Энергетики (Core Energy)</h4>
+                    <p>Сердце «Снежинки». Игрок управляет балансом выработки и потребления.</p>
+                    <ul>
+                        <li><strong>Геймплей:</strong> Настройка электролизеров для производства водорода в период сильного ветра, переключение на топливные элементы в штиль.</li>
+                        <li><strong>Оборудование:</strong> Промышленные контроллеры, инверторы, системы мониторинга водородных накопителей.</li>
+                    </ul>
+
+                    <h4><i class="fas fa-temperature-low"></i> 2. Зона изучения климата (Climate Monitoring)</h4>
+                    <p>Работа с данными в реальном времени.</p>
+                    <ul>
+                        <li><strong>Геймплей:</strong> Расстановка датчиков вечной мерзлоты, запуск метеозондов, анализ состава атмосферы. Интерпретация графиков для предсказания бури.</li>
+                        <li><strong>Оборудование:</strong> Лидары, газоанализаторы, датчики криолитозоны.</li>
+                    </ul>
+
+                    <h4><i class="fas fa-robot"></i> 3. Зона робототехники (Arctic Robotics)</h4>
+                    <p>Самая динамичная часть.</p>
+                    <ul>
+                        <li><strong>Геймплей:</strong> Дистанционное управление беспилотниками и вездеходами для осмотра внешних конструкций. Программирование ИИ для автономной очистки солнечных панелей от снега.</li>
+                        <li><strong>Оборудование:</strong> Пульты управления БПЛА, роботизированные манипуляторы, интерфейсы логического программирования.</li>
+                    </ul>
+
+                    <h4><i class="fas fa-leaf"></i> 4. Зона биологии (BioTech & Life Science)</h4>
+                    <p>Исследования в замкнутом цикле.</p>
+                    <ul>
+                        <li><strong>Геймплей:</strong> Выращивание растений в аэропонике/гидропонике (арктическая теплица), изучение микробиологии экстремальных сред.</li>
+                        <li><strong>Оборудование:</strong> Автоматизированные фитосистемы, микроскопы, инкубаторы.</li>
+                    </ul>
+                    <!-- Изображение для зоны биологии -->
+                    <div class="inline-image">
+                        <img src="https://comiccon2025.github.io/img/room/room_plants_1.jpg" alt="Фитолаборатория" onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'padding:20px;text-align:center;background:#1A1E24;\'><i class=\'fas fa-seedling\' style=\'font-size:32px;color:#3C6CE7;\'></i><p>Арктическая теплица (гидропоника)</p></div>'">
+                        <div style="padding: 8px; text-align: center; color: #767C89;">Автоматизированная фитосистема — зона биологии</div>
+                    </div>
+
+                    <h4><i class="fas fa-satellite-dish"></i> 5. Зона систем связи (Connectivity Hub)</h4>
+                    <p>В Арктике связь — выживание.</p>
+                    <ul>
+                        <li><strong>Механика:</strong> Развёртывание Mesh-сети, настройка спутниковых терминалов, обеспечение стабильного сигнала между станцией и датчиками.</li>
+                        <li><strong>Сценарии:</strong> Борьба с радиопомехами во время северного сияния, восстановление связи после повреждения антенны ветром.</li>
+                    </ul>
+                    <!-- Изображение для зоны связи -->
+                    <div class="inline-image">
+                        <img src="https://comiccon2025.github.io/img/dishes.jpg" alt="Спутниковые антенны" onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'padding:20px;text-align:center;background:#1A1E24;\'><i class=\'fas fa-satellite\' style=\'font-size:32px;color:#3C6CE7;\'></i><p>Спутниковая связь</p></div>'">
+                        <div style="padding: 8px; text-align: center; color: #767C89;">Спутниковые терминалы Connectivity Hub</div>
+                    </div>
+
+                    <h3>🚜 Парк цифровой техники (Arctic Fleet) — мультиплеер</h3>
+                    <p>Цифровой двойник позволяет протестировать физику движения каждого вида транспорта. <strong>В режиме техники доступен мультиплеер</strong> — исследуйте станцию вместе с друзьями.</p>
+                    
+                    <!-- Изображение вездеход + сноубайк + разведдрон -->
+                    <div class="image-row">
+                        <div class="inline-image">
+                            <img src="https://blockchainaccreditive.github.io/css/price2.jpg" alt="Вездеход и сноубайк" onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'padding:30px;text-align:center;\'><i class=\'fas fa-truck\' style=\'font-size:32px;\'></i><p>Вездеход</p></div>'">
+                        </div>
+                        <div class="inline-image">
+                            <img src="https://comiccon2025.github.io/img/snowflake/underwater_1.jpg" alt="Подводный дрон" onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'padding:30px;text-align:center;\'><i class=\'fas fa-water\' style=\'font-size:32px;\'></i><p>Подводный дрон</p></div>'">
+                        </div>
+                    </div>
+                    <ul>
+                        <li><strong>Вездеходы и снегоходы:</strong> Транспортировка грузов и учёных между модулями по пересечённой местности с учётом реальных микронеровностей.</li>
+                        <li><strong>Воздушные дроны:</strong> Фотограмметрия местности, мониторинг состояния куполов станции.</li>
+                        <li><strong>Подводные дроны (АНПА/ТНПА):</strong> Изучение подлёдного пространства, осмотр донных датчиков, гидрологические исследования в ледяной воде.</li>
+                    </ul>
+
+                    <h3><i class="fas fa-mountain"></i> Сверхточный ландшафт (Digital Terrain)</h3>
+                    <p>Точность 1–3 см даёт уникальные возможности:</p>
+                    <ul>
+                        <li><strong>Планирование маршрутов:</strong> Учитывайте каждую кочку и трещину, чтобы не перевернуть вездеход и не потерять дрон.</li>
+                        <li><strong>Геодезия:</strong> Виртуальная разметка территории под установку новых научных приборов.</li>
+                        <li><strong>Проектирование:</strong> Возможность планировать собственные помещения и лаборатории прямо в виртуальной реальности.</li>
+                    </ul>
+
+                    <!-- Вставка изображения лидара -->
+                    <div class="inline-image">
+                        <img src="https://comiccon2025.github.io/img/snowflake/lIdar.jpg" alt="Лазерное сканирование (лидар)" onerror="this.style.display='none'; this.parentElement.innerHTML='<div style=\'padding:40px;text-align:center;\'>🌀 [визуализация данных лидара]</div>'">
+                        <div style="padding: 12px; text-align: center; color: #767C89;">Лазерное сканирование (лидар) — основа субдециметровой точности рельефа</div>
+                    </div>
+
+                    <h3>🎯 Игровой цикл: пример задания</h3>
+                    <p>Игрок получает задание: «Установить метеостанцию на дальней точке». Необходимо:</p>
+                    <ol>
+                        <li>Выбрать подходящий вездеход в гараже.</li>
+                        <li>Проверить заряд батарей (взаимодействие с энергозоной).</li>
+                        <li>Проложить маршрут по высокоточной карте.</li>
+                        <li>На месте настроить устойчивый канал связи с базой (зона связи).</li>
+                        <li>В случае поломки — отправить дрона для инспекции (зона робототехники).</li>
+                    </ol>
+                    <p>Каждое действие требует понимания работы реального оборудования и влияет на общий успех миссии.</p>
+
+                    <div class="divider"></div>
+
+                    <h3>📡 Технологии создания</h3>
+                    <p>Мы использовали связку передовых методов:</p>
+                    <ul>
+                        <li><strong>Промышленные БПЛА</strong> с 8K-сенсорами для детальной съёмки.</li>
+                        <li><strong>Панорамные камеры</strong> профессионального класса.</li>
+                        <li><strong>Спутниковые снимки</strong> группировки «Канопус-В» для ортофотопланов.</li>
+                        <li><strong>GNSS-приёмники (ГЛОНАСС) в режиме RTK</strong> — геодезическая привязка с точностью до сантиметра.</li>
+                    </ul>
+
+                    <div class="note">
+                        <i class="fas fa-flask"></i> Проект полностью импортонезависим и реализован на базе VK Play. Пользователям VK Play эксклюзивно доступны VR, PC и WEB-версии, а также авторские уровни от разработчиков. В режиме вездеходов и другой техники доступен мультиплеер.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Боковая панель -->
+            <div class="content-side">
+                <div class="card" style="padding: 20px;">
+                    <h3 style="margin-top: 0; margin-bottom: 16px;"><i class="fas fa-info-circle"></i> Детали игры</h3>
+                    <ul class="info-list">
+                        <li><span class="info-label">Разработчик</span><span class="info-value">VK Play Digital</span></li>
+                        <li><span class="info-label">Издатель</span><span class="info-value">VK Play</span></li>
+                        <li><span class="info-label">Дата выхода</span><span class="info-value">2026</span></li>
+                        <li><span class="info-label">Платформа</span><span class="info-value">PC / VR / WEB</span></li>
+                        <li><span class="info-label">Движок</span><span class="info-value">UNIGINE 2 <a href="https://reestr.digital.gov.ru/reestr/2338176/" target="blank" style="color: #3C6CE7;">(рег. № 22252)</a></span></li>
+                        <li><span class="info-label">Режим</span><span class="info-value">Одиночный / мультиплеер (техника)</span></li>
+                    </ul>
+                </div>
+
+                <div class="card" style="padding: 20px;">
+                    <h3 style="margin-top: 0; margin-bottom: 16px;"><i class="fas fa-microchip"></i> Технические детали</h3>
+                    <ul class="info-list" style="font-size: 13px;">
+                        <li><span class="info-label">Фотограмметрия</span><span class="info-value">8K БПЛА</span></li>
+                        <li><span class="info-label">Геодезия</span><span class="info-value">GNSS RTK (ГЛОНАСС)</span></li>
+                        <li><span class="info-label">Точность рельефа</span><span class="info-value">1–3 см</span></li>
+                        <li><span class="info-label">Спутники</span><span class="info-value">«Канопус-В»</span></li>
+                        <li><span class="info-label">Погода</span><span class="info-value">Динамическая</span></li>
+                        <li><span class="info-label">Физика</span><span class="info-value">микрорельеф</span></li>
+                    </ul>
+                    <!-- Блок с информацией о сертификации UNIGINE -->
+                    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid #262A32;">
+                        <p style="color: #9BB7FF; font-size: 13px; margin-bottom: 4px;"><i class="fas fa-certificate"></i> <strong>UNIGINE — российский движок</strong></p>
+                        <p style="font-size: 12px; color: #B0B5BD; margin-bottom: 8px;">
+                            Включён в единый реестр российских программ для ЭВМ и баз данных, рег. № заявления 298402, реестровый № 22252.<br>
+                            Свидетельство о государственной регистрации программы для ЭВМ № 2014660370.<br>
+                            Номер товарного знака UNIGINE: 745516.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Системные требования -->
+                <div class="system-req">
+                    <p style="font-weight: 600;"><i class="fas fa-desktop"></i> Системные требования (мин.)</p>
+                    <p>ОС: Windows 11<br>CPU: Intel Core i7-12700K<br>RAM: 32 ГБ<br>GPU: GeForce RTX 3080<br>Место: 100 ГБ (SSD)</p>
+                    <p style="font-size: 13px; color: #A3A7B0;">*рекомендуется для работы с высокодетализированной средой</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Футер -->
+        <footer class="footer">
+            <div>© 2025 VK Play. Демо-страница цифрового двойника «Снежинка».</div>
+            <div class="footer-links">
+                <a href="https://vkplay.ru/legal/terms" target="_blank">Пользовательское соглашение</a>
+                <a href="https://vkplay.ru/legal/privacy" target="_blank">Конфиденциальность</a>
+                <a href="https://vkplay.ru/support/" target="_blank">Помощь</a>
+            </div>
+        </footer>
+    </div>
+</body>
+</html>
