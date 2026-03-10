@@ -101,11 +101,6 @@
             white-space: nowrap;
         }
 
-        /* Класс для логотипов без текста (скрывает span) */
-        .no-text span {
-            display: none;
-        }
-
         /* Hero секция занимает всё доступное место (flex: 1) */
         .hero {
             flex: 1;
@@ -332,6 +327,7 @@
             }
         }
 
+        /* Очень узкие экраны: скрываем текст у всех логотипов */
         @media (max-width: 480px) {
             .logo-link span {
                 display: none;
@@ -349,10 +345,10 @@
             </a>
         </div>
         <div class="header-center">
-            <!-- Заменён логотип МФТИ на РОСАТОМ, без текста (класс no-text) -->
-            <span class="logo-link no-text" style="cursor:default;">
+            <!-- Логотип РОСАТОМ с текстом (скрывается на мобильных автоматически) -->
+            <span class="logo-link" style="cursor:default;">
                 <img src="https://comiccon2025.github.io/img/rosatom.png" alt="РОСАТОМ" width="84" height="84">
-                <span></span> <!-- пустой span, скрыт через no-text -->
+                <span>РОСАТОМ</span>
             </span>
         </div>
         <div class="header-right">
