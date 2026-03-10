@@ -101,15 +101,8 @@
             white-space: nowrap;
         }
 
-        /* Специально для логотипа МФТИ: адаптивная ширина, увеличена на 50% */
-        .mipt-logo img {
-            width: clamp(120px, 18vw, 280px);
-            height: auto;
-            aspect-ratio: 187 / 56;
-        }
-
-        /* Убираем текст у МФТИ */
-        .mipt-logo span {
+        /* Класс для логотипов без текста (скрывает span) */
+        .no-text span {
             display: none;
         }
 
@@ -305,9 +298,6 @@
             .logo-link span {
                 font-size: 28px;
             }
-            .mipt-logo img {
-                width: clamp(96px, 15vw, 220px);
-            }
         }
 
         /* Мобильные (max-width: 700px) */
@@ -321,9 +311,6 @@
             }
             .logo-link span {
                 font-size: 22px;
-            }
-            .mipt-logo img {
-                width: clamp(80px, 12vw, 160px);
             }
             .footer-icons {
                 padding: 12px 5%;
@@ -351,8 +338,6 @@
             }
         }
     </style>
-
-    
 </head>
 <body>
     <!-- Шапка: три логотипа (левый, центр, правый) -->
@@ -364,9 +349,10 @@
             </a>
         </div>
         <div class="header-center">
-            <span class="logo-link mipt-logo" style="cursor:default;">
-                <img src="https://comiccon2025.github.io/img/rosatom.png" alt="Росатом" width="280" height="auto" style="width: clamp(120px, 18vw, 280px); height: auto;">
-                <span>РОСАТОМ</span>
+            <!-- Заменён логотип МФТИ на РОСАТОМ, без текста (класс no-text) -->
+            <span class="logo-link no-text" style="cursor:default;">
+                <img src="https://comiccon2025.github.io/img/rosatom.png" alt="РОСАТОМ" width="84" height="84">
+                <span></span> <!-- пустой span, скрыт через no-text -->
             </span>
         </div>
         <div class="header-right">
