@@ -160,6 +160,16 @@
             opacity: 0;
         }
 
+        .hero-bg-6 {
+            background-image: url('https://comiccon2025.github.io/img/4/4.png');
+            opacity: 0;
+        }
+
+        .hero-bg-7 {
+            background-image: url('https://comiccon2025.github.io/img/4/art_1.png');
+            opacity: 0;
+        }
+
         /* Плавающие логотипы (общий контейнер) */
         .floating-logos {
             position: absolute;
@@ -341,6 +351,8 @@
             }
         }
     </style>
+
+    
 </head>
 <body>
     <!-- Шапка: три логотипа (левый, центр, правый) -->
@@ -353,7 +365,7 @@
         </div>
         <div class="header-center">
             <span class="logo-link mipt-logo" style="cursor:default;">
-                <img src="https://comiccon2025.github.io/img/snowflake/mipt.png" alt="МФТИ" width="280" height="auto" style="width: clamp(120px, 18vw, 280px); height: auto;">
+                <img src="https://comiccon2025.github.io/img/rosatom-1.png" alt="Росатом" width="280" height="auto" style="width: clamp(120px, 18vw, 280px); height: auto;">
                 <span></span>
             </span>
         </div>
@@ -367,12 +379,14 @@
 
     <!-- Hero секция с переключающимися фонами (flex: 1) -->
     <section class="hero">
-        <!-- Пять слоёв для crossfade -->
+        <!-- Семь слоёв для crossfade -->
         <div class="hero-bg hero-bg-1"></div>
         <div class="hero-bg hero-bg-2"></div>
         <div class="hero-bg hero-bg-3"></div>
         <div class="hero-bg hero-bg-4"></div>
         <div class="hero-bg hero-bg-5"></div>
+        <div class="hero-bg hero-bg-6"></div>
+        <div class="hero-bg hero-bg-7"></div>
 
         <!-- Плавающие логотипы VK Play и Снежинки -->
         <div class="floating-logos">
@@ -407,13 +421,15 @@
 
     <script>
         (function() {
-            // Crossfade between five background images
+            // Crossfade between seven background images
             const bg1 = document.querySelector('.hero-bg-1');
             const bg2 = document.querySelector('.hero-bg-2');
             const bg3 = document.querySelector('.hero-bg-3');
             const bg4 = document.querySelector('.hero-bg-4');
             const bg5 = document.querySelector('.hero-bg-5');
-            const backgrounds = [bg1, bg2, bg3, bg4, bg5];
+            const bg6 = document.querySelector('.hero-bg-6');
+            const bg7 = document.querySelector('.hero-bg-7');
+            const backgrounds = [bg1, bg2, bg3, bg4, bg5, bg6, bg7];
             let currentIndex = 0;
 
             // Set initial opacity
