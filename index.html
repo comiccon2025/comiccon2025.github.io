@@ -48,7 +48,7 @@
             overflow: hidden;
         }
 
-        /* Фоновые изображения для перехода (теперь 9 слоёв) */
+        /* Фоновые изображения для перехода (10 слоёв) */
         .hero-bg {
             position: absolute;
             top: 0;
@@ -63,46 +63,51 @@
         }
 
         .hero-bg-1 {
-            background-image: url('https://refoldit.github.io/img/snowflake/70qbit.png'); /* новое, первое */
+            background-image: url('https://refoldit.github.io/img/snowflake/hero_first_logo.png'); /* новое первое */
             opacity: 1;
         }
 
         .hero-bg-2 {
-            background-image: url('https://comiccon2025.github.io/img/snowflake/hero_snow.png');
+            background-image: url('https://refoldit.github.io/img/snowflake/70qbit.png');
             opacity: 0;
         }
 
         .hero-bg-3 {
-            background-image: url('https://comiccon2025.github.io/img/snowflake/car.png');
+            background-image: url('https://comiccon2025.github.io/img/snowflake/hero_snow.png');
             opacity: 0;
         }
 
         .hero-bg-4 {
-            background-image: url('https://comiccon2025.github.io/img/snowflake/lab.png');
+            background-image: url('https://comiccon2025.github.io/img/snowflake/car.png');
             opacity: 0;
         }
 
         .hero-bg-5 {
-            background-image: url('https://comiccon2025.github.io/img/room/room_plants_3.png');
+            background-image: url('https://comiccon2025.github.io/img/snowflake/lab.png');
             opacity: 0;
         }
 
         .hero-bg-6 {
-            background-image: url('https://refoldit.github.io/img/snowflake/biotech_folding.png');
+            background-image: url('https://comiccon2025.github.io/img/room/room_plants_3.png');
             opacity: 0;
         }
 
         .hero-bg-7 {
-            background-image: url('https://refoldit.github.io/img/snowflake/biotech_plants.png');
+            background-image: url('https://refoldit.github.io/img/snowflake/biotech_folding.png');
             opacity: 0;
         }
 
         .hero-bg-8 {
-            background-image: url('https://refoldit.github.io/img/snowflake/art_character.png');
+            background-image: url('https://refoldit.github.io/img/snowflake/biotech_plants.png');
             opacity: 0;
         }
 
         .hero-bg-9 {
+            background-image: url('https://refoldit.github.io/img/snowflake/art_character.png');
+            opacity: 0;
+        }
+
+        .hero-bg-10 {
             background-image: url('https://refoldit.github.io/img/snowflake/biotech_plants_1.png');
             opacity: 0;
         }
@@ -314,9 +319,9 @@
     </style>
 </head>
 <body>
-    <!-- Hero секция с переключающимися фонами (теперь 9 фонов) -->
+    <!-- Hero секция с переключающимися фонами (теперь 10 фонов) -->
     <section class="hero">
-        <!-- Девять слоёв для crossfade -->
+        <!-- Десять слоёв для crossfade -->
         <div class="hero-bg hero-bg-1"></div>
         <div class="hero-bg hero-bg-2"></div>
         <div class="hero-bg hero-bg-3"></div>
@@ -326,6 +331,7 @@
         <div class="hero-bg hero-bg-7"></div>
         <div class="hero-bg hero-bg-8"></div>
         <div class="hero-bg hero-bg-9"></div>
+        <div class="hero-bg hero-bg-10"></div>
 
         <!-- Плавающие логотипы: Росатом и снежинка -->
         <div class="floating-logos">
@@ -382,7 +388,7 @@
 
     <script>
         (function() {
-            // Получаем все 9 фонов
+            // Получаем все 10 фонов
             const bg1 = document.querySelector('.hero-bg-1');
             const bg2 = document.querySelector('.hero-bg-2');
             const bg3 = document.querySelector('.hero-bg-3');
@@ -392,7 +398,8 @@
             const bg7 = document.querySelector('.hero-bg-7');
             const bg8 = document.querySelector('.hero-bg-8');
             const bg9 = document.querySelector('.hero-bg-9');
-            const backgrounds = [bg1, bg2, bg3, bg4, bg5, bg6, bg7, bg8, bg9];
+            const bg10 = document.querySelector('.hero-bg-10');
+            const backgrounds = [bg1, bg2, bg3, bg4, bg5, bg6, bg7, bg8, bg9, bg10];
             let currentIndex = 0;
 
             // Устанавливаем начальную прозрачность: первый видим, остальные скрыты
