@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rick 2D Platformer</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #111;
+            overflow: hidden;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            touch-action: none;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: crosshair;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #444;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.9);
+            max-width: 320px;
+            z-index: 10;
+        }
+        h1 { margin: 0 0 10px 0; font-size: 18px; color: #A4D8D8; text-transform: uppercase; letter-spacing: 2px;}
+        p { margin: 5px 0; font-size: 13px; color: #ccc; display: flex; align-items: center; gap: 5px;}
+        .key { display: inline-block; background: #444; padding: 2px 6px; border-radius: 4px; color: #fff; font-family: monospace; font-weight: bold;}
+        
+        #gemini-controls {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+        }
+
+        .gemini-btn {
+            background: linear-gradient(135deg, #1a73e8, #8ab4f8);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 30px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(26, 115, 232, 0.4);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            pointer-events: auto;
+        }
+
+        .gemini-btn:hover { transform: translateY(-2px); filter: brightness(1.1); }
+
+        #speech-bubble {
+            position: absolute;
+            background: white;
+            color: black;
+            padding: 10px 15px;
+            border-radius: 15px;
+            font-size: 14px;
+            max-width: 200px;
+            display: none;
+            pointer-events: none;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+
+        #speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 20px;
+            border-width: 10px 10px 0;
+            border-style: solid;
+            border-color: white transparent transparent;
+        }
+
+        #loader {
+            display: none;
+            color: #42f554;
+            font-size: 12px;
+            margin-top: 5px;
+            font-family: monospace;
+        }
+
+        #vignette {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.6) 100%);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    <div id="vignette"></div>
+    <div id="ui">
+        <h1>PROJECT C-137</h1>
+        <p><span class="key">A</span> / <span class="key">D</span> или <span class="key">←</span> / <span class="key">→</span> : Ходьба</p>
+        <p><span class="key">Space</span> или <span class="key">W</span> : Прыжок</p>
+        <p><span class="key">E</span> : Достать/Убрать портальную пушку</p>
+        <p><span class="key">Click</span> : Выстрел (когда пушка в руках)</p>
+        <div id="loader">Связь с Цитаделью...</div>
+    </div>
+
+    <div id="speech-bubble"></div>
+
+    <div id="gemini-controls">
+        <button class="gemini-btn" onclick="generateRickQuote()">✨ Рик, скажи что-нибудь!</button>
+        <button class="gemini-btn" onclick="analyzePortal()">✨ Куда ведет портал?</button>
+    </div>
+
+    <script>
+        const apiKey = "";
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const loader = document.getElementById('loader');
+        const bubble = document.getElementById('speech-bubble');
+
+        let width, height, groundY;
+        const gravity = 0.5; // Fixed the missing gravity definition
+
+        function resize() {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+            groundY = height - 100;
+            if (player) {
+                if (player.y > groundY || player.y === 0) player.y = groundY;
+            }
+        }
+
+        // --- Audio System ---
+        let audioCtx;
+        function initAudio() {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        
+        function playSynthSound(freq, type, duration, vol = 0.1) {
+            if (!audioCtx) return;
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = type;
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            gain.gain.setValueAtTime(vol, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+            osc.start();
+            osc.stop(audioCtx.currentTime + duration);
+        }
+
+        const sounds = {
+            jump: () => playSynthSound(150, 'sine', 0.3, 0.2),
+            step: () => playSynthSound(50, 'triangle', 0.1, 0.05),
+            portal: () => {
+                if (!audioCtx) return;
+                const now = audioCtx.currentTime;
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(100, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.1);
+                osc.frequency.exponentialRampToValueAtTime(10, now + 0.4);
+                gain.gain.setValueAtTime(0.3, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+                osc.connect(gain); gain.connect(audioCtx.destination);
+                osc.start(); osc.stop(now + 0.4);
+            }
+        };
+
+        // --- Gemini API ---
+        async function callGemini(prompt, isTTS = false) {
+            loader.style.display = 'block';
+            try {
+                const model = isTTS ? 'gemini-2.5-flash-preview-tts' : 'gemini-2.5-flash-preview-09-2025';
+                const endpoint = isTTS ? 'generateContent' : 'generateContent';
+                const body = {
+                    contents: [{ parts: [{ text: prompt }] }]
+                };
+                
+                if (isTTS) {
+                    body.generationConfig = {
+                        responseModalities: ["AUDIO"],
+                        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: "Puck" } } }
+                    };
+                } else {
+                    body.systemInstruction = { parts: [{ text: "Ты - Рик Санчез. Коротко, цинично, икота *ик*, русский язык. Не более 10 слов." }] };
+                }
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:${endpoint}?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                
+                const data = await response.json();
+                loader.style.display = 'none';
+                if (isTTS) return data.candidates[0].content.parts[0].inlineData;
+                return data.candidates[0].content.parts[0].text;
+            } catch (e) {
+                loader.style.display = 'none';
+                return null;
+            }
+        }
+
+        async function playAudio(inlineData) {
+            if (!inlineData || !audioCtx) return;
+            const audioData = inlineData.data;
+            const sampleRate = parseInt(inlineData.mimeType.split('rate=')[1]) || 24000;
+            const binaryString = atob(audioData);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) bytes[i] = binaryString.charCodeAt(i);
+            const wavHeader = new ArrayBuffer(44);
+            const view = new DataView(wavHeader);
+            const writeString = (o, s) => { for (let i = 0; i < s.length; i++) view.setUint8(o + i, s.charCodeAt(i)); };
+            writeString(0, 'RIFF'); view.setUint32(4, 36 + len, true); writeString(8, 'WAVE');
+            writeString(12, 'fmt '); view.setUint32(16, 16, true); view.setUint16(20, 1, true);
+            view.setUint16(22, 1, true); view.setUint32(24, sampleRate, true);
+            view.setUint32(28, sampleRate * 2, true); view.setUint16(32, 2, true);
+            view.setUint16(34, 16, true); writeString(36, 'data'); view.setUint32(40, len, true);
+            const blob = new Blob([wavHeader, bytes], { type: 'audio/wav' });
+            const audio = new Audio(URL.createObjectURL(blob));
+            audio.play();
+        }
+
+        async function generateRickQuote() {
+            initAudio();
+            const text = await callGemini("Скажи что-то ворчливое игроку.");
+            if (text) { showSpeech(text); const audio = await callGemini(`Голосом Рика: ${text}`, true); playAudio(audio); }
+        }
+
+        async function analyzePortal() {
+            initAudio();
+            if (!gunEquipped) { showSpeech("Достань пушку сначала! *ик*"); return; }
+            const text = await callGemini("Придумай название измерения.");
+            if (text) { showSpeech(text); const audio = await callGemini(`Голосом Рика: ${text}`, true); playAudio(audio); }
+        }
+
+        function showSpeech(text) {
+            bubble.innerText = text; bubble.style.display = 'block';
+            setTimeout(() => { bubble.style.display = 'none'; }, 5000);
+        }
+
+        // --- Game Setup ---
+        const keys = { left: false, right: false, up: false };
+        let gunEquipped = false;
+        let mousePos = { x: 0, y: 0 };
+        let projectiles = [];
+
+        const player = {
+            x: 0, y: 0, vx: 0, vy: 0,
+            speed: 5, jumpForce: 13, facing: 1, state: 'idle', walkCycle: 0,
+            gunAngle: 0,
+            colors: { skin: '#F3E0D6', hair: '#A4D8D8', coat: '#E8E8E8', shirt: '#A3D8D0', pants: '#5B5041', shoes: '#FFFFFF', belt: '#333' },
+            joints: { head: 0, torso: 0, armR_U: 0, armR_L: 0, armL_U: 0, armL_L: 0, legR_U: 0, legR_L: 0, legL_U: 0, legL_L: 0 }
+        };
+
+        window.addEventListener('resize', resize);
+        resize();
+        player.x = width / 2;
+        player.y = groundY;
+
+        window.addEventListener('keydown', e => {
+            initAudio();
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
+            if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') keys.up = true;
+            if (e.code === 'KeyE') {
+                gunEquipped = !gunEquipped;
+                playSynthSound(300, 'square', 0.1, 0.05);
+            }
+        });
+
+        window.addEventListener('keyup', e => {
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
+            if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') keys.up = false;
+        });
+
+        window.addEventListener('mousemove', e => {
+            mousePos.x = e.clientX;
+            mousePos.y = e.clientY;
+        });
+
+        const handleFire = () => {
+            if (!gunEquipped) return;
+            initAudio();
+            sounds.portal();
+            const angle = player.gunAngle;
+            // Correct the firing position relative to facing
+            const startX = player.x + (20 * player.facing);
+            const startY = player.y - 65;
+            
+            projectiles.push({
+                x: startX,
+                y: startY,
+                vx: Math.cos(angle) * 15 * player.facing,
+                vy: Math.sin(angle) * 15,
+                life: 100
+            });
+        };
+
+        window.addEventListener('mousedown', handleFire);
+        let lastTap = 0;
+        window.addEventListener('touchstart', e => {
+            initAudio();
+            const now = Date.now();
+            if (now - lastTap < 300) handleFire();
+            lastTap = now;
+            mousePos.x = e.touches[0].clientX;
+            mousePos.y = e.touches[0].clientY;
+        });
+
+        function lerp(s, e, a) { return (1 - a) * s + a * e; }
+
+        function updateAnimation(p) {
+            let tj = { torso:0, head:0, armR_U:0.1, armR_L:0.1, armL_U:-0.1, armL_L:0.1, legR_U:0, legR_L:0, legL_U:0, legL_L:0 };
+            let time = Date.now() / 1000;
+
+            if (p.state === 'idle') {
+                tj.torso = Math.sin(time * 2) * 0.05;
+                tj.head = Math.sin(time * 2 + 1) * 0.02;
+            } else if (p.state === 'walk') {
+                p.walkCycle += 0.2;
+                if (Math.sin(p.walkCycle) > 0.9) sounds.step();
+                let w = p.walkCycle;
+                tj.legR_U = Math.sin(w) * 0.8;
+                tj.legR_L = Math.max(0, Math.sin(w - 1.5)) * 1.2; 
+                tj.legL_U = Math.sin(w + Math.PI) * 0.8;
+                tj.legL_L = Math.max(0, Math.sin(w + Math.PI - 1.5)) * 1.2;
+                tj.armR_U = Math.sin(w + Math.PI) * 0.5;
+                tj.armL_U = Math.sin(w) * 0.5;
+            } else if (p.state === 'jump') {
+                tj.torso = 0.2; tj.legR_U = -0.5; tj.legL_U = -0.8;
+                tj.armR_U = -0.5; tj.armL_U = -0.8;
+            }
+
+            if (gunEquipped) {
+                const dx = (mousePos.x - p.x) * p.facing;
+                const dy = mousePos.y - (p.y - 70);
+                p.gunAngle = Math.atan2(dy, dx);
+                tj.armR_U = p.gunAngle;
+                tj.armR_L = 0;
+            }
+
+            for (let k in p.joints) p.joints[k] = lerp(p.joints[k], tj[k], 0.2);
+            bubble.style.left = (p.x - 100) + 'px';
+            bubble.style.top = (p.y - 200) + 'px';
+        }
+
+        function drawCapsule(x, y, length, radius, angle, color) {
+            ctx.save(); ctx.translate(x, y); ctx.rotate(angle); ctx.fillStyle = color;
+            ctx.beginPath(); ctx.arc(0, 0, radius, Math.PI, 0); ctx.lineTo(radius, length);
+            ctx.arc(0, length, radius, 0, Math.PI); ctx.closePath(); ctx.fill();
+            if(color === player.colors.coat) { ctx.strokeStyle = '#ccc'; ctx.lineWidth = 1; ctx.stroke(); }
+            ctx.restore();
+        }
+
+        function drawRick(p) {
+            ctx.save(); ctx.translate(p.x, p.y); ctx.scale(p.facing, 1);
+            const j = p.joints, c = p.colors;
+            const hipY = -45, torsoLen = 35, legLen = 22, armLen = 18;
+
+            // Back limbs
+            ctx.save(); ctx.translate(0, hipY); ctx.rotate(j.legL_U); drawCapsule(0, 0, legLen, 5, 0, c.pants); ctx.restore();
+            ctx.save(); ctx.translate(0, hipY - torsoLen + 5); ctx.rotate(j.armL_U); drawCapsule(0, 0, armLen, 4, 0, c.coat); ctx.restore();
+
+            // Body
+            ctx.save(); ctx.translate(0, hipY); ctx.rotate(j.torso);
+            drawCapsule(0, -torsoLen, torsoLen, 8, 0, c.shirt);
+            ctx.fillStyle = c.coat; ctx.fillRect(-8, -torsoLen, 16, torsoLen);
+            
+            // Head
+            ctx.save(); ctx.translate(0, -torsoLen); ctx.rotate(j.head);
+            ctx.fillStyle = c.hair; ctx.beginPath(); 
+            for(let i=0; i<12; i++) {
+                let a = (i/12)*Math.PI*2; ctx.lineTo(Math.cos(a)*25, Math.sin(a)*25-10);
+                ctx.lineTo(Math.cos(a+0.2)*15, Math.sin(a+0.2)*15-10);
+            }
+            ctx.fill();
+            ctx.fillStyle = c.skin; ctx.beginPath(); ctx.ellipse(0, -10, 12, 16, 0, 0, Math.PI*2); ctx.fill();
+            ctx.fillStyle = 'white'; ctx.beginPath(); ctx.arc(5, -12, 4, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(-5, -12, 4, 0, 7); ctx.fill();
+            ctx.fillStyle = 'black'; ctx.beginPath(); ctx.arc(5, -12, 1, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(-5, -12, 1, 0, 7); ctx.fill();
+            ctx.restore(); ctx.restore();
+
+            // Front limbs
+            ctx.save(); ctx.translate(0, hipY); ctx.rotate(j.legR_U); drawCapsule(0, 0, legLen, 5, 0, c.pants); ctx.restore();
+            ctx.save(); ctx.translate(0, hipY - torsoLen + 5); ctx.rotate(j.armR_U); drawCapsule(0, 0, armLen, 4, 0, c.coat);
+            if (gunEquipped) {
+                ctx.translate(0, armLen); ctx.rotate(Math.PI/2);
+                ctx.fillStyle = '#999'; ctx.fillRect(0, -3, 15, 6);
+                ctx.fillStyle = '#42f554'; ctx.beginPath(); ctx.arc(10, 0, 3, 0, 7); ctx.fill();
+            }
+            ctx.restore(); ctx.restore();
+        }
+
+        function loop() {
+            // Physics Update
+            player.vy += gravity; 
+            player.y += player.vy;
+            
+            if (player.y >= groundY) { 
+                player.y = groundY; 
+                player.vy = 0; 
+                if (player.state === 'jump') player.state = 'idle'; 
+            } else {
+                player.state = 'jump';
+            }
+
+            if (keys.left) { 
+                player.vx = -player.speed; 
+                if(!gunEquipped) player.facing = -1; 
+                if (player.state !== 'jump') player.state = 'walk'; 
+            } else if (keys.right) { 
+                player.vx = player.speed; 
+                if(!gunEquipped) player.facing = 1; 
+                if (player.state !== 'jump') player.state = 'walk'; 
+            } else { 
+                player.vx = 0; 
+                if (player.state !== 'jump') player.state = 'idle'; 
+            }
+            
+            if (gunEquipped) player.facing = mousePos.x > player.x ? 1 : -1;
+
+            player.x += player.vx;
+            // Screen bounds
+            if (player.x < 20) player.x = 20;
+            if (player.x > width - 20) player.x = width - 20;
+
+            if (keys.up && player.y === groundY) { 
+                player.vy = -player.jumpForce; 
+                player.state = 'jump'; 
+                sounds.jump(); 
+            }
+
+            updateAnimation(player);
+            
+            projectiles.forEach(p => { 
+                p.x += p.vx; 
+                p.y += p.vy; 
+                p.life--; 
+            });
+            projectiles = projectiles.filter(p => p.life > 0);
+
+            // Draw
+            ctx.fillStyle = '#111'; 
+            ctx.fillRect(0, 0, width, height);
+            
+            // Floor
+            ctx.fillStyle = '#222'; 
+            ctx.fillRect(0, groundY, width, height - groundY);
+            ctx.strokeStyle = '#444'; 
+            ctx.beginPath(); 
+            ctx.moveTo(0, groundY); 
+            ctx.lineTo(width, groundY); 
+            ctx.stroke();
+            
+            // Projectiles
+            projectiles.forEach(p => {
+                ctx.shadowBlur = 10; 
+                ctx.shadowColor = '#42f554';
+                ctx.fillStyle = '#42f554'; 
+                ctx.beginPath(); 
+                ctx.arc(p.x, p.y, 4, 0, 7); 
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            });
+
+            drawRick(player);
+            requestAnimationFrame(loop);
+        }
+        
+        // Start game loop
+        requestAnimationFrame(loop);
+    </script>
+</body>
+</html>
