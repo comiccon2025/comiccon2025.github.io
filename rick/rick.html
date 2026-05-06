@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Rick 2D Platformer</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #111;
+            overflow: hidden;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #fff;
+            pointer-events: none;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #333;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+        }
+        h1 { margin: 0 0 10px 0; font-size: 20px; color: #A4D8D8; text-transform: uppercase; letter-spacing: 2px;}
+        p { margin: 5px 0; font-size: 14px; color: #ccc;}
+        .key { display: inline-block; background: #333; padding: 2px 6px; border-radius: 4px; color: #fff; margin-right: 4px;}
+        
+        /* Виньетка для атмосферы "Inside" */
+        #vignette {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, rgba(0,0,0,0) 40%, rgba(0,0,0,0.8) 100%);
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+    <div id="vignette"></div>
+    <div id="ui">
+        <h1>Project C-137</h1>
+        <p><span class="key">A</span> / <span class="key">D</span> или <span class="key">←</span> / <span class="key">→</span> : Ходьба</p>
+        <p><span class="key">Space</span> или <span class="key">W</span> : Прыжок</p>
+        <p><span class="key">E</span> : Достать/Убрать портальную пушку</p>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        let width = canvas.width = window.innerWidth;
+        let height = canvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            width = canvas.width = window.innerWidth;
+            height = canvas.height = window.innerHeight;
+        });
+
+        // --- Управление ---
+        const keys = { left: false, right: false, up: false, gun: false };
+        let gunEquipped = false;
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = true;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = true;
+            if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') keys.up = true;
+            if (e.code === 'KeyE') {
+                if (!keys.gun) {
+                    gunEquipped = !gunEquipped;
+                }
+                keys.gun = true;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.left = false;
+            if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.right = false;
+            if (e.code === 'KeyW' || e.code === 'ArrowUp' || e.code === 'Space') keys.up = false;
+            if (e.code === 'KeyE') keys.gun = false;
+        });
+
+        // --- Физика и игрок ---
+        const gravity = 0.5;
+        const groundY = height - 100;
+
+        // Линейная интерполяция для плавности
+        function lerp(start, end, amt) {
+            return (1 - amt) * start + amt * end;
+        }
+
+        const player = {
+            x: width / 2,
+            y: groundY,
+            vx: 0,
+            vy: 0,
+            speed: 4,
+            jumpForce: 12,
+            facing: 1, // 1 = вправо, -1 = влево
+            state: 'idle', // idle, walk, jump
+            walkCycle: 0,
+            
+            // Цвета Рика
+            colors: {
+                skin: '#F3E0D6',
+                hair: '#A4D8D8',
+                coat: '#E8E8E8',
+                shirt: '#A3D8D0',
+                pants: '#5B5041',
+                shoes: '#FFFFFF',
+                belt: '#333'
+            },
+
+            // Углы суставов (текущие и целевые для плавного перехода)
+            joints: {
+                head: 0, torso: 0,
+                armR_U: 0, armR_L: 0,
+                armL_U: 0, armL_L: 0,
+                legR_U: 0, legR_L: 0,
+                legL_U: 0, legL_L: 0
+            },
+            targetJoints: {
+                head: 0, torso: 0,
+                armR_U: 0, armR_L: 0,
+                armL_U: 0, armL_L: 0,
+                legR_U: 0, legR_L: 0,
+                legL_U: 0, legL_L: 0
+            }
+        };
+
+        // --- Логика анимации (вычисление целевых углов) ---
+        function updateAnimation(p) {
+            let tj = p.targetJoints;
+            let time = Date.now() / 1000;
+
+            if (p.state === 'idle') {
+                // Дыхание
+                tj.torso = Math.sin(time * 2) * 0.05;
+                tj.head = Math.sin(time * 2 + 1) * 0.02;
+                
+                // Руки опущены
+                tj.armR_U = 0.1; tj.armR_L = 0.1;
+                tj.armL_U = -0.1; tj.armL_L = 0.1;
+                
+                // Ноги прямо
+                tj.legR_U = 0; tj.legR_L = 0;
+                tj.legL_U = 0; tj.legL_L = 0;
+
+            } else if (p.state === 'walk') {
+                p.walkCycle += 0.15;
+                let w = p.walkCycle;
+                
+                tj.torso = 0.1 + Math.sin(w * 2) * 0.05; // Легкий наклон вперед и покачивание
+                tj.head = -0.05;
+                
+                // Ноги (фазы сдвинуты на PI)
+                tj.legR_U = Math.sin(w) * 0.8;
+                tj.legR_L = Math.max(0, Math.sin(w - 1.5)) * 1.2; 
+                
+                tj.legL_U = Math.sin(w + Math.PI) * 0.8;
+                tj.legL_L = Math.max(0, Math.sin(w + Math.PI - 1.5)) * 1.2;
+
+                // Руки машут в противофазе ногам
+                tj.armR_U = Math.sin(w + Math.PI) * 0.5;
+                tj.armR_L = 0.2 + Math.max(0, Math.sin(w + Math.PI)) * 0.5;
+                
+                tj.armL_U = Math.sin(w) * 0.5;
+                tj.armL_L = 0.2 + Math.max(0, Math.sin(w)) * 0.5;
+
+            } else if (p.state === 'jump') {
+                tj.torso = 0.2;
+                tj.head = -0.2;
+                
+                // Ноги поджаты
+                tj.legR_U = -0.5; tj.legR_L = 1.0;
+                tj.legL_U = -0.8; tj.legL_L = 1.2;
+                
+                // Руки взлетают
+                tj.armR_U = -0.5; tj.armR_L = 0.5;
+                tj.armL_U = -0.8; tj.armL_L = 0.8;
+            }
+
+            // Переопределение правой руки, если пушка в руках
+            if (gunEquipped) {
+                // Если мы достаем пушку, рука плавно вытягивается вперед
+                tj.armR_U = -Math.PI / 2 + 0.1; // Почти горизонтально вперед
+                tj.armR_L = 0; // Прямая рука
+                tj.torso += 0.1; // Слегка откидываемся назад от веса
+            }
+
+            // Плавное применение целевых углов к текущим (Lerp)
+            let lerpSpeed = 0.15;
+            for (let key in p.joints) {
+                p.joints[key] = lerp(p.joints[key], tj[key], lerpSpeed);
+            }
+        }
+
+        // --- Отрисовка Рика ---
+        function drawCapsule(x, y, length, radius, angle, color) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(angle);
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(0, 0, radius, Math.PI, 0);
+            ctx.lineTo(radius, length);
+            ctx.arc(0, length, radius, 0, Math.PI);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Если это халат (белый), добавляем легкий контур для объема
+            if(color === player.colors.coat) {
+                ctx.strokeStyle = '#ccc';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            ctx.restore();
+        }
+
+        function drawRick(p) {
+            ctx.save();
+            // Смещаемся к позиции игрока. y - это пол, поэтому рисуем вверх.
+            ctx.translate(p.x, p.y);
+            // Масштабируем по X для поворота влево/вправо
+            ctx.scale(p.facing, 1);
+            
+            // Легкое покачивание всей фигуры при ходьбе
+            let bobY = (p.state === 'walk') ? Math.abs(Math.sin(p.walkCycle * 2)) * 3 : 0;
+            ctx.translate(0, -bobY);
+
+            const j = p.joints;
+            const c = p.colors;
+            
+            // Пропорции
+            const hipY = -45;
+            const legLen = 22;
+            const legRad = 5;
+            const torsoLen = 35;
+            const armLen = 18;
+            const armRad = 4;
+            const neckY = hipY - torsoLen;
+
+            // Функция-помощник для трансформации суставов
+            function applyJoint(x, y, angle) {
+                ctx.translate(x, y);
+                ctx.rotate(angle);
+            }
+
+            // --- ЗАДНИЕ КОНЕЧНОСТИ (Левые) ---
+            
+            // Левая нога
+            ctx.save();
+            applyJoint(0, hipY, j.legL_U);
+            drawCapsule(0, 0, legLen, legRad, 0, c.pants); // Бедро
+            applyJoint(0, legLen, j.legL_L);
+            drawCapsule(0, 0, legLen, legRad-1, 0, c.pants); // Голень
+            // Ботинок
+            ctx.fillStyle = c.shoes;
+            ctx.beginPath();
+            ctx.ellipse(3, legLen+2, 8, 4, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.restore();
+
+            // Левая рука (сзади туловища)
+            ctx.save();
+            applyJoint(0, neckY + 5, j.armL_U);
+            drawCapsule(0, 0, armLen, armRad, 0, c.coat); // Плечо
+            applyJoint(0, armLen, j.armL_L);
+            drawCapsule(0, 0, armLen, armRad-0.5, 0, c.skin); // Предплечье (голое/рубашка)
+            ctx.restore();
+
+            // --- ТУЛОВИЩЕ И ХАЛАТ ---
+            ctx.save();
+            applyJoint(0, hipY, j.torso);
+
+            // Задняя пола халата (развевается)
+            let flapAngle = (p.state === 'walk') ? -0.3 + Math.sin(p.walkCycle)*0.2 : (p.state === 'jump' ? -0.5 : -0.1);
+            ctx.save();
+            ctx.rotate(flapAngle);
+            ctx.fillStyle = c.coat;
+            ctx.beginPath();
+            ctx.moveTo(-5, 0); ctx.lineTo(-12, 35); ctx.lineTo(2, 35); ctx.lineTo(5, 0);
+            ctx.fill();
+            ctx.restore();
+
+            // Тело
+            drawCapsule(0, -torsoLen, torsoLen, 8, 0, c.shirt);
+            
+            // Пояс
+            ctx.fillStyle = c.belt;
+            ctx.fillRect(-8, -2, 16, 4);
+
+            // Передняя часть халата
+            ctx.fillStyle = c.coat;
+            ctx.beginPath();
+            ctx.moveTo(-8, -torsoLen); ctx.lineTo(8, -torsoLen);
+            ctx.lineTo(10, 0); ctx.lineTo(-4, 0); // Открытый спереди
+            ctx.fill();
+
+            // --- ГОЛОВА ---
+            ctx.save();
+            applyJoint(0, -torsoLen, j.head);
+            
+            // Волосы (Колючки)
+            ctx.fillStyle = c.hair;
+            ctx.beginPath();
+            const spikes = 14;
+            for(let i=0; i<=spikes; i++) {
+                let a = (i/spikes) * Math.PI * 2 - Math.PI/2;
+                let a2 = ((i+0.5)/spikes) * Math.PI * 2 - Math.PI/2;
+                let r1 = 28; // Длина колючек
+                let r2 = 14; // База колючек
+                if(i===0) ctx.moveTo(Math.cos(a)*r1, Math.sin(a)*r1 - 10);
+                else ctx.lineTo(Math.cos(a)*r1, Math.sin(a)*r1 - 10);
+                ctx.lineTo(Math.cos(a2)*r2, Math.sin(a2)*r2 - 10);
+            }
+            ctx.fill();
+
+            // Лицо (Голова)
+            ctx.fillStyle = c.skin;
+            ctx.beginPath();
+            ctx.ellipse(3, -10, 12, 16, 0, 0, Math.PI*2);
+            ctx.fill();
+
+            // Глаза
+            ctx.fillStyle = '#fff';
+            ctx.beginPath(); ctx.arc(7, -14, 4, 0, Math.PI*2); ctx.fill(); // Правый
+            ctx.beginPath(); ctx.arc(-1, -14, 4, 0, Math.PI*2); ctx.fill(); // Левый
+            
+            ctx.fillStyle = '#000'; // Зрачки
+            // Немного хаотичные зрачки Рика
+            ctx.beginPath(); ctx.arc(8, -14, 1, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(0, -14, 1, 0, Math.PI*2); ctx.fill();
+
+            // Монобровь
+            ctx.strokeStyle = '#222';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(-6, -18);
+            ctx.lineTo(12, -18);
+            ctx.stroke();
+
+            // Нос
+            ctx.beginPath(); ctx.moveTo(8, -10); ctx.lineTo(10, -8); ctx.stroke();
+
+            // Рот (легкое недовольство)
+            ctx.beginPath(); ctx.moveTo(3, -3); ctx.lineTo(10, -2); ctx.stroke();
+            
+            // Слюна (опционально для Рика, маленькая деталь)
+            ctx.strokeStyle = '#84c5cc';
+            ctx.beginPath(); ctx.moveTo(3, -3); ctx.lineTo(3, 2); ctx.stroke();
+
+            ctx.restore(); // Конец головы
+            ctx.restore(); // Конец туловища
+
+            // --- ПЕРЕДНИЕ КОНЕЧНОСТИ (Правые) ---
+
+            // Правая нога
+            ctx.save();
+            applyJoint(0, hipY, j.legR_U);
+            drawCapsule(0, 0, legLen, legRad, 0, c.pants);
+            applyJoint(0, legLen, j.legR_L);
+            drawCapsule(0, 0, legLen, legRad-1, 0, c.pants);
+            // Ботинок
+            ctx.fillStyle = c.shoes;
+            ctx.beginPath();
+            ctx.ellipse(3, legLen+2, 8, 4, 0, 0, Math.PI*2);
+            ctx.fill();
+            ctx.restore();
+
+            // Правая рука и Портальная пушка
+            ctx.save();
+            applyJoint(0, neckY + 5, j.armR_U);
+            drawCapsule(0, 0, armLen, armRad, 0, c.coat); // Плечо халата
+            applyJoint(0, armLen, j.armR_L);
+            drawCapsule(0, 0, armLen, armRad-0.5, 0, c.skin); // Предплечье
+            
+            // Портальная пушка
+            if (gunEquipped) {
+                // Отрисовка в руке (в конце предплечья)
+                ctx.translate(0, armLen);
+                ctx.rotate(Math.PI/2); // Направляем вперед
+
+                // Тело пушки
+                ctx.fillStyle = '#aaa';
+                ctx.fillRect(0, -4, 16, 8);
+                ctx.fillStyle = '#333';
+                ctx.fillRect(2, -5, 6, 10);
+                
+                // Зеленая колба
+                ctx.fillStyle = '#42f554';
+                ctx.beginPath(); ctx.arc(10, 0, 3, 0, Math.PI*2); ctx.fill();
+                
+                // Свечение колбы
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = '#42f554';
+                ctx.fillRect(16, -2, 4, 4);
+                ctx.shadowBlur = 0; // Сброс
+            }
+
+            ctx.restore();
+
+            ctx.restore(); // Конец Рика
+        }
+
+        // --- Фон и окружение (Стиль Inside) ---
+        function drawEnvironment() {
+            // Задний фон (глубокий параллакс)
+            ctx.fillStyle = '#0a0a0c';
+            ctx.fillRect(0, 0, width, height);
+
+            // Колонны / Силуэты зданий на фоне
+            ctx.fillStyle = '#141416';
+            for(let i=0; i<10; i++) {
+                let x = (i * 200 - player.x * 0.1) % (width + 200);
+                if (x < -200) x += width + 400;
+                ctx.fillRect(x, 100, 80, height);
+            }
+
+            // Средний план
+            ctx.fillStyle = '#1a1a1e';
+            for(let i=0; i<15; i++) {
+                let x = (i * 150 - player.x * 0.3) % (width + 150);
+                if (x < -150) x += width + 300;
+                ctx.fillRect(x, height/2 - 50, 40, height);
+            }
+
+            // Пол
+            let floorGrad = ctx.createLinearGradient(0, groundY, 0, height);
+            floorGrad.addColorStop(0, '#222');
+            floorGrad.addColorStop(1, '#050505');
+            ctx.fillStyle = floorGrad;
+            ctx.fillRect(0, groundY, width, height - groundY);
+            
+            // Линия пола (блик)
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, groundY, width, 2);
+        }
+
+        // --- Главный цикл игры ---
+        function update() {
+            // Обновление физики
+            player.vy += gravity;
+            player.y += player.vy;
+
+            // Коллизия с полом
+            if (player.y >= groundY) {
+                player.y = groundY;
+                player.vy = 0;
+                if (player.state === 'jump') {
+                    player.state = 'idle';
+                }
+            } else {
+                player.state = 'jump';
+            }
+
+            // Движение
+            if (keys.left) {
+                player.vx = -player.speed;
+                player.facing = -1;
+                if (player.state !== 'jump') player.state = 'walk';
+            } else if (keys.right) {
+                player.vx = player.speed;
+                player.facing = 1;
+                if (player.state !== 'jump') player.state = 'walk';
+            } else {
+                player.vx = 0;
+                if (player.state !== 'jump') player.state = 'idle';
+            }
+
+            player.x += player.vx;
+
+            // Ограничение экрана
+            if (player.x < 20) player.x = 20;
+            if (player.x > width - 20) player.x = width - 20;
+
+            // Прыжок
+            if (keys.up && player.y === groundY) {
+                player.vy = -player.jumpForce;
+                player.state = 'jump';
+            }
+
+            // Обновление скелета
+            updateAnimation(player);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            drawEnvironment();
+            drawRick(player);
+        }
+
+        function loop() {
+            update();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // Запуск
+        loop();
+
+    </script>
+</body>
+</html>
