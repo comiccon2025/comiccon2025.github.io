@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Xbot Character Controller</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #a0a0a0; font-family: sans-serif; }
+        #ui {
+            position: absolute; top: 20px; left: 20px; color: #333;
+            background: rgba(255, 255, 255, 0.8); padding: 15px; border-radius: 8px; 
+            pointer-events: none; border: 1px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        #instructions {
+            position: absolute; bottom: 20px; width: 100%; text-align: center;
+            color: #444; font-weight: bold; text-transform: uppercase;
+        }
+        kbd {
+            background: #eee; border: 1px solid #999; border-radius: 3px;
+            padding: 2px 6px; font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+
+<div id="ui">
+    <h3 style="margin:0 0 10px 0;">Управление Xbot</h3>
+    <p style="margin: 5px 0;"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> — Движение</p>
+    <p style="margin: 5px 0;"><kbd>Shift</kbd> — Бег</p>
+    <div id="status" style="color: #666; font-size: 0.85em; margin-top:10px;">Загрузка ресурсов...</div>
+</div>
+<div id="instructions">Используйте мышь для вращения камеры</div>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+        }
+    }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+    let scene, camera, renderer, clock, controls;
+    let model, mixer, skeleton;
+    
+    // Состояния анимаций
+    let currentBaseAction = 'idle';
+    const allActions = [];
+    const baseActions = {
+        idle: { weight: 1 },
+        walk: { weight: 0 },
+        run: { weight: 0 }
+    };
+
+    const keys = { w: false, a: false, s: false, d: false, shift: false };
+    const walkDirection = new THREE.Vector3();
+    const rotateQuaternion = new THREE.Quaternion();
+    const cameraTarget = new THREE.Vector3();
+
+    init();
+
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xa0a0a0);
+        scene.fog = new THREE.Fog(0xa0a0a0, 10, 50);
+
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 3, 10);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        clock = new THREE.Clock();
+
+        // Освещение
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 3);
+        hemiLight.position.set(0, 20, 0);
+        scene.add(hemiLight);
+
+        const dirLight = new THREE.DirectionalLight(0xffffff, 3);
+        dirLight.position.set(3, 10, 10);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        // Земля
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
+            new THREE.MeshPhongMaterial({ color: 0xcbcbcb, depthWrite: false })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        const grid = new THREE.GridHelper(100, 40, 0x888888, 0xcccccc);
+        scene.add(grid);
+
+        // Контроллер камеры
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.minDistance = 3;
+        controls.maxDistance = 20;
+        controls.enablePan = false;
+        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+
+        // Загрузка модели
+        const loader = new GLTFLoader();
+        const modelUrl = 'https://tripreport.github.io/3D/Xbot.glb';
+
+        loader.load(modelUrl, (gltf) => {
+            model = gltf.scene;
+            scene.add(model);
+
+            model.traverse(object => {
+                if (object.isMesh) object.castShadow = true;
+            });
+
+            mixer = new THREE.AnimationMixer(model);
+            
+            // Инициализация анимаций из файла
+            gltf.animations.forEach(clip => {
+                const name = clip.name.toLowerCase();
+                let actionName = '';
+                
+                if (name.includes('idle')) actionName = 'idle';
+                else if (name.includes('walk')) actionName = 'walk';
+                else if (name.includes('run')) actionName = 'run';
+
+                if (actionName && baseActions[actionName]) {
+                    const action = mixer.clipAction(clip);
+                    baseActions[actionName].action = action;
+                    allActions.push(action);
+                    
+                    // Настройка веса по умолчанию
+                    action.enabled = true;
+                    action.setEffectiveTimeScale(1);
+                    action.setEffectiveWeight(baseActions[actionName].weight);
+                    action.play();
+                }
+            });
+
+            document.getElementById('status').innerText = 'Система онлайн. Двигайтесь!';
+            animate();
+
+        }, undefined, (error) => {
+            console.error(error);
+            document.getElementById('status').innerText = 'Ошибка загрузки модели.';
+        });
+
+        window.addEventListener('keydown', (e) => updateKey(e, true));
+        window.addEventListener('keyup', (e) => updateKey(e, false));
+        window.addEventListener('resize', onWindowResize);
+    }
+
+    function updateKey(event, isPressed) {
+        const key = event.key.toLowerCase();
+        if (keys.hasOwnProperty(key)) keys[key] = isPressed;
+        if (event.shiftKey !== undefined) keys.shift = event.shiftKey;
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function updateCharacter(delta) {
+        if (!model || !mixer) return;
+
+        const isMoving = keys.w || keys.a || keys.s || keys.d;
+        const isRunning = keys.shift && isMoving;
+
+        // Определяем целевое состояние
+        let desiredAction = 'idle';
+        if (isMoving) {
+            desiredAction = isRunning ? 'run' : 'walk';
+        }
+
+        // Плавный переход между анимациями (Blending)
+        if (currentBaseAction !== desiredAction) {
+            const fromAction = baseActions[currentBaseAction].action;
+            const toAction = baseActions[desiredAction].action;
+
+            if (fromAction && toAction) {
+                fromAction.fadeOut(0.3);
+                toAction.reset().fadeIn(0.3).play();
+                currentBaseAction = desiredAction;
+            }
+        }
+
+        // Физика перемещения
+        if (isMoving) {
+            // Расчет угла направления относительно камеры
+            const angleYCameraDirection = Math.atan2(
+                (camera.position.x - model.position.x), 
+                (camera.position.z - model.position.z)
+            );
+            
+            let directionOffset = 0; // w
+            if (keys.w) {
+                if (keys.a) directionOffset = Math.PI / 4;
+                else if (keys.d) directionOffset = -Math.PI / 4;
+            } else if (keys.s) {
+                if (keys.a) directionOffset = Math.PI * 3 / 4;
+                else if (keys.d) directionOffset = -Math.PI * 3 / 4;
+                else directionOffset = Math.PI;
+            } else if (keys.a) directionOffset = Math.PI / 2;
+            else if (keys.d) directionOffset = -Math.PI / 2;
+
+            // Поворот модели
+            rotateQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angleYCameraDirection + directionOffset);
+            model.quaternion.rotateTowards(rotateQuaternion, 0.15);
+
+            // Движение
+            const speed = isRunning ? 5 : 2;
+            walkDirection.set(0, 0, -1).applyQuaternion(model.quaternion);
+            model.position.addScaledVector(walkDirection, speed * delta);
+        }
+
+        // Камера следует за персонажем
+        cameraTarget.set(model.position.x, model.position.y + 1, model.position.z);
+        controls.target.copy(cameraTarget);
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+        
+        if (mixer) mixer.update(delta);
+        updateCharacter(delta);
+        
+        controls.update();
+        renderer.render(scene, camera);
+    }
+</script>
+</body>
+</html>
