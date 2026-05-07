@@ -160,7 +160,6 @@
         }
     });
 
-    // Отображение clientID
     const clientId = ydoc.clientID;
     debugClient.textContent = 'Мой ID: ' + clientId;
 
@@ -248,6 +247,7 @@
         const loader = new GLTFLoader(loadingManager);
         const modelUrl = 'https://threejs.org/examples/models/gltf/Xbot.glb';
 
+        // Сначала загружаем модель, потом включаем сетевую логику
         loader.load(modelUrl, (gltf) => {
             model = gltf.scene;
             scene.add(model);
@@ -256,8 +256,12 @@
                 if (object.isMesh) object.castShadow = true;
             });
 
-            // Сохраняем шаблон для удалённых игроков
-            remotePlayerTemplate = gltf.scene;
+            // Сохраняем чистую копию шаблона для удалённых игроков
+            remotePlayerTemplate = gltf.scene.clone(true);
+            // Убедимся, что у клона тоже включены тени
+            remotePlayerTemplate.traverse(obj => {
+                if (obj.isMesh) obj.castShadow = true;
+            });
 
             mixer = new THREE.AnimationMixer(model);
 
@@ -278,82 +282,50 @@
                 }
             });
 
-            animate();
-        });
+            // Только после загрузки модели начинаем слушать изменения playersMap
+            playersMap.observe(event => {
+                event.changes.keys.forEach((change, playerId) => {
+                    if (playerId === ydoc.clientID.toString()) return;
 
-        // Наблюдение за изменениями карты игроков
-        playersMap.observe(event => {
-            event.changes.keys.forEach((change, playerId) => {
-                if (playerId === ydoc.clientID.toString()) return;
-
-                if (change.action === 'delete') {
-                    const mesh = remotePlayers.get(playerId);
-                    if (mesh) {
-                        scene.remove(mesh);
-                        remotePlayers.delete(playerId);
+                    if (change.action === 'delete') {
+                        const mesh = remotePlayers.get(playerId);
+                        if (mesh) {
+                            scene.remove(mesh);
+                            remotePlayers.delete(playerId);
+                        }
+                        updateRemoteCount();
+                        return;
                     }
-                    updateRemoteCount();
-                    return;
-                }
 
-                const playerData = playersMap.get(playerId);
-                if (!playerData) return;
+                    const playerData = playersMap.get(playerId);
+                    if (!playerData) return;
 
-                let playerMesh = remotePlayers.get(playerId);
-                if (!playerMesh) {
-                    if (remotePlayerTemplate) {
-                        // Клонируем модель Xbot для удалённого игрока
+                    let playerMesh = remotePlayers.get(playerId);
+                    if (!playerMesh) {
+                        // Всегда используем клон модели Xbot
                         playerMesh = remotePlayerTemplate.clone(true);
-                        // Убедимся, что тени включены
                         playerMesh.traverse(obj => {
                             if (obj.isMesh) obj.castShadow = true;
                         });
-                    } else {
-                        // Запасной вариант — простой манекен (на случай, если шаблон ещё не загружен)
-                        playerMesh = createFallbackMannequin();
+                        scene.add(playerMesh);
+                        remotePlayers.set(playerId, playerMesh);
+                        updateRemoteCount();
                     }
-                    scene.add(playerMesh);
-                    remotePlayers.set(playerId, playerMesh);
-                    updateRemoteCount();
-                }
 
-                const pos = playerData.position;
-                const quat = playerData.quaternion;
-                playerMesh.position.set(pos.x, pos.y, pos.z);
-                playerMesh.quaternion.set(quat.x, quat.y, quat.z, quat.w);
+                    const pos = playerData.position;
+                    const quat = playerData.quaternion;
+                    playerMesh.position.set(pos.x, pos.y, pos.z);
+                    playerMesh.quaternion.set(quat.x, quat.y, quat.z, quat.w);
+                });
             });
+
+            // Запускаем анимацию
+            animate();
         });
 
         window.addEventListener('keydown', (e) => updateKey(e, true));
         window.addEventListener('keyup', (e) => updateKey(e, false));
         window.addEventListener('resize', onWindowResize);
-    }
-
-    function createFallbackMannequin() {
-        const group = new THREE.Group();
-        const bodyGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.4, 8);
-        const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3366ff });
-        const body = new THREE.Mesh(bodyGeo, bodyMat);
-        body.position.y = 0.7;
-        body.castShadow = true;
-        group.add(body);
-
-        const headGeo = new THREE.SphereGeometry(0.3, 8, 8);
-        const headMat = new THREE.MeshStandardMaterial({ color: 0xffccaa });
-        const head = new THREE.Mesh(headGeo, headMat);
-        head.position.y = 1.55;
-        head.castShadow = true;
-        group.add(head);
-
-        const arrowGeo = new THREE.ConeGeometry(0.15, 0.5, 4);
-        const arrowMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
-        const arrow = new THREE.Mesh(arrowGeo, arrowMat);
-        arrow.position.set(0, 0.9, 0.4);
-        arrow.rotation.x = Math.PI / 2;
-        arrow.castShadow = true;
-        group.add(arrow);
-
-        return group;
     }
 
     function updateRemoteCount() {
