@@ -3,54 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Multiuser Multiplayer Test</title>
+    <title>3D Multiplayer Test</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Courier New', Courier, monospace; }
+        body { margin: 0; overflow: hidden; background-color: #f0f0f0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         
-        #ui-panel {
-            position: absolute; top: 20px; left: 20px; color: #00ff88;
-            background: rgba(0, 20, 0, 0.8); padding: 15px; border-radius: 8px; 
-            border: 1px solid #00ff88; pointer-events: none; z-index: 10;
-            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
-        }
-        
-        .stat-line { margin: 5px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
-        kbd { background: #00ff88; color: #000; padding: 2px 6px; border-radius: 3px; font-weight: bold; }
-
         #player-count {
-            position: absolute; top: 20px; right: 20px; background: #00ff88;
-            color: #000; padding: 10px 20px; border-radius: 4px; font-weight: bold;
-            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5); z-index: 10;
+            position: absolute; top: 20px; right: 20px; background: rgba(255, 255, 255, 0.9);
+            color: #333; padding: 12px 24px; border-radius: 30px; font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1); z-index: 10;
+            cursor: pointer; border: 2px solid transparent; transition: all 0.3s;
+            user-select: none;
+        }
+        #player-count:hover { border-color: #007bff; transform: scale(1.05); }
+
+        #nickname-modal {
+            display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 1000; text-align: center;
+        }
+        #nickname-modal input {
+            padding: 10px; width: 200px; border: 2px solid #ddd; border-radius: 8px;
+            margin-bottom: 15px; font-size: 16px; outline: none;
+        }
+        #nickname-modal button {
+            padding: 10px 25px; background: #007bff; color: white; border: none;
+            border-radius: 8px; cursor: pointer; font-weight: bold;
         }
 
         #loading-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: #000; display: flex; flex-direction: column;
+            background: #fff; display: flex; flex-direction: column;
             align-items: center; justify-content: center; z-index: 100;
         }
-        .portal-loader {
-            width: 100px; height: 100px; border-radius: 50%;
-            border: 5px solid #00ff88; border-top-color: transparent;
-            animation: spin 1s linear infinite; margin-bottom: 20px;
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #f3f3f3;
+            border-top: 5px solid #007bff; border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
 <div id="loading-overlay">
-    <div class="portal-loader"></div>
-    <div style="color: #00ff88; letter-spacing: 5px;">ОТКРЫТИЕ ПОРТАЛА...</div>
+    <div class="spinner"></div>
+    <p>Загрузка мира...</p>
 </div>
 
-<div id="ui-panel">
-    <div class="stat-line"><b>Rick Sanchez Control</b></div>
-    <div class="stat-line"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — Передвижение</div>
-    <div class="stat-line"><kbd>Shift</kbd> — Ускорение</div>
-    <div id="my-id-display" class="stat-line" style="color: #fff; margin-top: 10px;"></div>
-</div>
+<div id="player-count" onclick="openNickModal()">Загрузка...</div>
 
-<div id="player-count">Игроков: 1</div>
+<div id="nickname-modal">
+    <h3>Введите ваш никнейм</h3>
+    <input type="text" id="nick-input" placeholder="Имя игрока" maxlength="12">
+    <br>
+    <button onclick="saveNickname()">Сохранить</button>
+</div>
 
 <script type="importmap">
     {
@@ -70,38 +77,55 @@
     import * as Y from 'yjs';
     import { WebrtcProvider } from 'y-webrtc';
 
-    // --- СЕТЕВАЯ КОНФИГУРАЦИЯ ---
+    // --- Сетевая часть ---
     const ydoc = new Y.Doc();
-    const provider = new WebrtcProvider('rick-multiverse-room-unique-v3', ydoc, {
+    const provider = new WebrtcProvider('threejs-multiplayer-v4-room', ydoc, {
         signaling: ['wss://signaling.yjs.dev'] 
     });
     const awareness = provider.awareness;
-    const myId = awareness.clientID;
+    let myNickname = "Игрок " + awareness.clientID.toString().slice(-4);
 
-    document.getElementById('my-id-display').innerText = `ВАШ ID: ${myId}`;
-
-    // --- THREE.JS ПЕРЕМЕННЫЕ ---
-    let scene, camera, renderer, clock, controls;
+    // --- Three.js ---
+    let scene, camera, renderer, clock, controls, raycaster, mouse;
     let localModel, localMixer;
-    let remotePlayers = new Map(); // Храним { model, mixer, actions }
+    let remotePlayers = new Map();
     
     const localActions = { idle: null, walk: null, run: null };
     const keys = { w: false, a: false, s: false, d: false, shift: false };
     
-    // Вспомогательные объекты для векторов
     const walkDirection = new THREE.Vector3();
     const rotateQuaternion = new THREE.Quaternion();
     const cameraTarget = new THREE.Vector3();
 
-    // URL модели Рика (или Xbot как база, если внешняя ссылка недоступна)
     const RICK_MODEL_URL = 'https://threejs.org/examples/models/gltf/Xbot.glb'; 
+
+    window.openNickModal = () => {
+        document.getElementById('nick-input').value = myNickname;
+        document.getElementById('nickname-modal').style.display = 'block';
+    };
+
+    window.saveNickname = () => {
+        const val = document.getElementById('nick-input').value.trim();
+        if (val) {
+            myNickname = val;
+            updateLocalState();
+            if (localModel) {
+                const oldLabel = localModel.getObjectByName('label');
+                if (oldLabel) localModel.remove(oldLabel);
+                const newLabel = createTextLabel(myNickname, '#007bff');
+                newLabel.name = 'label';
+                localModel.add(newLabel);
+            }
+        }
+        document.getElementById('nickname-modal').style.display = 'none';
+    };
 
     init();
 
     function init() {
         scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x050505);
-        scene.fog = new THREE.Fog(0x050505, 15, 45);
+        scene.background = new THREE.Color(0xa0a0a0);
+        scene.fog = new THREE.Fog(0xa0a0a0, 10, 50);
 
         camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
         camera.position.set(0, 3, 10);
@@ -113,46 +137,44 @@
         document.body.appendChild(renderer.domElement);
 
         clock = new THREE.Clock();
+        raycaster = new THREE.Raycaster();
+        mouse = new THREE.Vector2();
 
-        // Освещение
-        scene.add(new THREE.HemisphereLight(0x443333, 0x111122, 3));
-        const spotLight = new THREE.SpotLight(0x00ff88, 5);
-        spotLight.position.set(5, 10, 5);
-        spotLight.castShadow = true;
-        scene.add(spotLight);
+        // Светлая схема освещения
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 2.5));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+        dirLight.position.set(5, 10, 7.5);
+        dirLight.castShadow = true;
+        dirLight.shadow.camera.top = 10;
+        dirLight.shadow.camera.bottom = -10;
+        dirLight.shadow.camera.left = -10;
+        dirLight.shadow.camera.right = 10;
+        scene.add(dirLight);
 
         // Пол
-        const floorGeo = new THREE.PlaneGeometry(200, 200);
-        const floorMat = new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 10 });
-        const floor = new THREE.Mesh(floorGeo, floorMat);
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
+            new THREE.MeshPhongMaterial({ color: 0x999999, depthWrite: false })
+        );
         floor.rotation.x = -Math.PI / 2;
         floor.receiveShadow = true;
         scene.add(floor);
-        
-        const grid = new THREE.GridHelper(200, 100, 0x00ff88, 0x222222);
-        grid.material.opacity = 0.2;
-        grid.material.transparent = true;
-        scene.add(grid);
+        scene.add(new THREE.GridHelper(100, 40, 0x888888, 0xbbbbbb));
 
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.maxDistance = 15;
-        controls.minDistance = 3;
         controls.target.set(0, 1, 0);
 
         const loader = new GLTFLoader();
-        
-        // Загрузка локального игрока
         loader.load(RICK_MODEL_URL, (gltf) => {
             localModel = gltf.scene;
-            localModel.scale.set(1, 1, 1);
             scene.add(localModel);
+            localModel.traverse(c => { if (c.isMesh) c.castShadow = true; });
             
-            localModel.traverse(child => { if (child.isMesh) child.castShadow = true; });
-            
-            // Спрайт ID для себя
-            const myLabel = createTextLabel(`YOU [${myId}]`, '#00ff88');
-            localModel.add(myLabel);
+            const label = createTextLabel(myNickname, '#007bff');
+            label.name = 'label';
+            localModel.add(label);
 
             localMixer = new THREE.AnimationMixer(localModel);
             setupAnimations(gltf.animations, localMixer, localActions);
@@ -161,37 +183,40 @@
             animate();
         });
 
-        // --- ГЛАВНАЯ ЛОГИКА МУЛЬТИПЛЕЕРА (Awareness) ---
+        // Слушатель сети
         awareness.on('change', () => {
             const states = awareness.getStates();
             const activeIds = Array.from(states.keys());
-            
-            document.getElementById('player-count').innerText = `Игроков: ${activeIds.length}`;
+            document.getElementById('player-count').innerText = `Игроков: ${activeIds.length} (Вы: ${myNickname})`;
 
-            // 1. Добавляем новых
             activeIds.forEach(id => {
-                if (id === myId) return;
+                if (id === awareness.clientID) return;
+                const state = states.get(id);
                 if (!remotePlayers.has(id)) {
-                    loadRemotePlayer(id);
+                    loadRemotePlayer(id, state.nick || "Rick");
+                } else {
+                    const p = remotePlayers.get(id);
+                    if (state.pos) {
+                        p.targetPos = new THREE.Vector3(state.pos.x, state.pos.y, state.pos.z);
+                        p.targetRot = new THREE.Quaternion(state.rot.x, state.rot.y, state.rot.z, state.rot.w);
+                        p.targetAnim = state.anim;
+                        // Обновление ника если изменился
+                        if (state.nick && state.nick !== p.nick) {
+                            p.nick = state.nick;
+                            const oldLabel = p.model.getObjectByName('label');
+                            if (oldLabel) p.model.remove(oldLabel);
+                            const newLabel = createTextLabel(p.nick);
+                            newLabel.name = 'label';
+                            p.model.add(newLabel);
+                        }
+                    }
                 }
             });
 
-            // 2. Удаляем ушедших
             remotePlayers.forEach((data, id) => {
                 if (!states.has(id)) {
                     scene.remove(data.model);
                     remotePlayers.delete(id);
-                }
-            });
-
-            // 3. Обновляем данные существующих
-            states.forEach((state, id) => {
-                if (id === myId || !state.pos) return;
-                const player = remotePlayers.get(id);
-                if (player) {
-                    player.targetPos = new THREE.Vector3(state.pos.x, state.pos.y, state.pos.z);
-                    player.targetRot = new THREE.Quaternion(state.rot.x, state.rot.y, state.rot.z, state.rot.w);
-                    player.targetAnim = state.anim;
                 }
             });
         });
@@ -199,24 +224,45 @@
         window.addEventListener('keydown', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; if(e.key === 'Shift') keys.shift = true; });
         window.addEventListener('keyup', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; if(e.key === 'Shift') keys.shift = false; });
         window.addEventListener('resize', onWindowResize);
+        window.addEventListener('mousedown', onMouseDown);
     }
 
-    function createTextLabel(text, color = '#ffffff') {
+    function onMouseDown(event) {
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+
+        if (localModel) {
+            const label = localModel.getObjectByName('label');
+            if (label) {
+                const intersects = raycaster.intersectObject(label);
+                if (intersects.length > 0) openNickModal();
+            }
+        }
+    }
+
+    function createTextLabel(text, color = '#333333') {
         const canvas = document.createElement('canvas');
         const ctx = canvas.getContext('2d');
         canvas.width = 512; canvas.height = 128;
-        ctx.fillStyle = 'rgba(0,0,0,0.6)';
-        ctx.roundRect(50, 20, 412, 88, 20);
+        
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.roundRect(50, 20, 412, 88, 44);
         ctx.fill();
-        ctx.font = 'bold 40px monospace';
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = color;
+        ctx.stroke();
+
+        ctx.font = 'bold 36px sans-serif';
         ctx.fillStyle = color;
         ctx.textAlign = 'center';
-        ctx.fillText(text, 256, 75);
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text, 256, 64);
         
         const tex = new THREE.CanvasTexture(canvas);
         const mat = new THREE.SpriteMaterial({ map: tex });
         const sprite = new THREE.Sprite(mat);
-        sprite.scale.set(3, 0.75, 1);
+        sprite.scale.set(2.5, 0.6, 1);
         sprite.position.y = 2.4;
         return sprite;
     }
@@ -234,16 +280,15 @@
         });
     }
 
-    function loadRemotePlayer(id) {
+    function loadRemotePlayer(id, nick) {
         const loader = new GLTFLoader();
-        // Временная заглушка данных, чтобы не было ошибки до загрузки модели
-        remotePlayers.set(id, { model: new THREE.Group(), loading: true });
+        remotePlayers.set(id, { model: new THREE.Group(), loading: true, nick: nick });
 
         loader.load(RICK_MODEL_URL, (gltf) => {
             const model = gltf.scene;
             scene.add(model);
-            
-            const label = createTextLabel(`RICK [${id}]`, '#ffffff');
+            const label = createTextLabel(nick);
+            label.name = 'label';
             model.add(label);
 
             const mixer = new THREE.AnimationMixer(model);
@@ -251,7 +296,7 @@
             setupAnimations(gltf.animations, mixer, actions);
 
             remotePlayers.set(id, {
-                model, mixer, actions,
+                model, mixer, actions, nick,
                 targetPos: new THREE.Vector3(),
                 targetRot: new THREE.Quaternion(),
                 targetAnim: 'idle'
@@ -265,19 +310,30 @@
         renderer.setSize(window.innerWidth, window.innerHeight);
     }
 
+    function updateLocalState() {
+        if (!localModel) return;
+        const isMoving = keys.w || keys.a || keys.s || keys.d;
+        const currentAnim = isMoving ? (keys.shift ? 'run' : 'walk') : 'idle';
+
+        awareness.setLocalState({
+            pos: { x: localModel.position.x, y: localModel.position.y, z: localModel.position.z },
+            rot: { x: localModel.quaternion.x, y: localModel.quaternion.y, z: localModel.quaternion.z, w: localModel.quaternion.w },
+            anim: currentAnim,
+            nick: myNickname
+        });
+    }
+
     function updateLocal(delta) {
         if (!localModel) return;
 
         const isMoving = keys.w || keys.a || keys.s || keys.d;
         const currentAnim = isMoving ? (keys.shift ? 'run' : 'walk') : 'idle';
 
-        // Анимации
         Object.keys(localActions).forEach(k => {
             const act = localActions[k];
             if (act) act.setEffectiveWeight(THREE.MathUtils.lerp(act.getEffectiveWeight(), k === currentAnim ? 1 : 0, delta * 10));
         });
 
-        // Движение
         if (isMoving) {
             const angle = Math.atan2(camera.position.x - localModel.position.x, camera.position.z - localModel.position.z);
             let offset = 0;
@@ -295,12 +351,7 @@
             localModel.position.addScaledVector(walkDirection, speed * delta);
         }
 
-        // ОТПРАВКА В AWARENESS (вместо Y.Map)
-        awareness.setLocalState({
-            pos: { x: localModel.position.x, y: localModel.position.y, z: localModel.position.z },
-            rot: { x: localModel.quaternion.x, y: localModel.quaternion.y, z: localModel.quaternion.z, w: localModel.quaternion.w },
-            anim: currentAnim
-        });
+        updateLocalState();
 
         cameraTarget.set(localModel.position.x, localModel.position.y + 1.5, localModel.position.z);
         controls.target.lerp(cameraTarget, 0.1);
@@ -313,7 +364,6 @@
         if (localMixer) localMixer.update(delta);
         updateLocal(delta);
 
-        // Обновление удаленных игроков
         remotePlayers.forEach(p => {
             if (p.loading || !p.mixer) return;
             p.mixer.update(delta);
