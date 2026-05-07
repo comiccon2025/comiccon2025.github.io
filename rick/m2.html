@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiuser Multiplayer Test</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #050505; font-family: 'Courier New', Courier, monospace; }
+        
+        #ui-panel {
+            position: absolute; top: 20px; left: 20px; color: #00ff88;
+            background: rgba(0, 20, 0, 0.8); padding: 15px; border-radius: 8px; 
+            border: 1px solid #00ff88; pointer-events: none; z-index: 10;
+            box-shadow: 0 0 15px rgba(0, 255, 136, 0.3);
+        }
+        
+        .stat-line { margin: 5px 0; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; }
+        kbd { background: #00ff88; color: #000; padding: 2px 6px; border-radius: 3px; font-weight: bold; }
+
+        #player-count {
+            position: absolute; top: 20px; right: 20px; background: #00ff88;
+            color: #000; padding: 10px 20px; border-radius: 4px; font-weight: bold;
+            box-shadow: 0 0 20px rgba(0, 255, 136, 0.5); z-index: 10;
+        }
+
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 100;
+        }
+        .portal-loader {
+            width: 100px; height: 100px; border-radius: 50%;
+            border: 5px solid #00ff88; border-top-color: transparent;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+
+<div id="loading-overlay">
+    <div class="portal-loader"></div>
+    <div style="color: #00ff88; letter-spacing: 5px;">ОТКРЫТИЕ ПОРТАЛА...</div>
+</div>
+
+<div id="ui-panel">
+    <div class="stat-line"><b>Rick Sanchez Control</b></div>
+    <div class="stat-line"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> — Передвижение</div>
+    <div class="stat-line"><kbd>Shift</kbd> — Ускорение</div>
+    <div id="my-id-display" class="stat-line" style="color: #fff; margin-top: 10px;"></div>
+</div>
+
+<div id="player-count">Игроков: 1</div>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+            "yjs": "https://cdn.jsdelivr.net/npm/yjs@13.6.10/+esm",
+            "y-webrtc": "https://cdn.jsdelivr.net/npm/y-webrtc@10.3.0/+esm"
+        }
+    }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import * as Y from 'yjs';
+    import { WebrtcProvider } from 'y-webrtc';
+
+    // --- СЕТЕВАЯ КОНФИГУРАЦИЯ ---
+    const ydoc = new Y.Doc();
+    const provider = new WebrtcProvider('rick-multiverse-room-unique-v3', ydoc, {
+        signaling: ['wss://signaling.yjs.dev'] 
+    });
+    const awareness = provider.awareness;
+    const myId = awareness.clientID;
+
+    document.getElementById('my-id-display').innerText = `ВАШ ID: ${myId}`;
+
+    // --- THREE.JS ПЕРЕМЕННЫЕ ---
+    let scene, camera, renderer, clock, controls;
+    let localModel, localMixer;
+    let remotePlayers = new Map(); // Храним { model, mixer, actions }
+    
+    const localActions = { idle: null, walk: null, run: null };
+    const keys = { w: false, a: false, s: false, d: false, shift: false };
+    
+    // Вспомогательные объекты для векторов
+    const walkDirection = new THREE.Vector3();
+    const rotateQuaternion = new THREE.Quaternion();
+    const cameraTarget = new THREE.Vector3();
+
+    // URL модели Рика (или Xbot как база, если внешняя ссылка недоступна)
+    const RICK_MODEL_URL = 'https://threejs.org/examples/models/gltf/Xbot.glb'; 
+
+    init();
+
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x050505);
+        scene.fog = new THREE.Fog(0x050505, 15, 45);
+
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 3, 10);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        clock = new THREE.Clock();
+
+        // Освещение
+        scene.add(new THREE.HemisphereLight(0x443333, 0x111122, 3));
+        const spotLight = new THREE.SpotLight(0x00ff88, 5);
+        spotLight.position.set(5, 10, 5);
+        spotLight.castShadow = true;
+        scene.add(spotLight);
+
+        // Пол
+        const floorGeo = new THREE.PlaneGeometry(200, 200);
+        const floorMat = new THREE.MeshPhongMaterial({ color: 0x111111, shininess: 10 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+        
+        const grid = new THREE.GridHelper(200, 100, 0x00ff88, 0x222222);
+        grid.material.opacity = 0.2;
+        grid.material.transparent = true;
+        scene.add(grid);
+
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.maxDistance = 15;
+        controls.minDistance = 3;
+        controls.target.set(0, 1, 0);
+
+        const loader = new GLTFLoader();
+        
+        // Загрузка локального игрока
+        loader.load(RICK_MODEL_URL, (gltf) => {
+            localModel = gltf.scene;
+            localModel.scale.set(1, 1, 1);
+            scene.add(localModel);
+            
+            localModel.traverse(child => { if (child.isMesh) child.castShadow = true; });
+            
+            // Спрайт ID для себя
+            const myLabel = createTextLabel(`YOU [${myId}]`, '#00ff88');
+            localModel.add(myLabel);
+
+            localMixer = new THREE.AnimationMixer(localModel);
+            setupAnimations(gltf.animations, localMixer, localActions);
+
+            document.getElementById('loading-overlay').style.display = 'none';
+            animate();
+        });
+
+        // --- ГЛАВНАЯ ЛОГИКА МУЛЬТИПЛЕЕРА (Awareness) ---
+        awareness.on('change', () => {
+            const states = awareness.getStates();
+            const activeIds = Array.from(states.keys());
+            
+            document.getElementById('player-count').innerText = `Игроков: ${activeIds.length}`;
+
+            // 1. Добавляем новых
+            activeIds.forEach(id => {
+                if (id === myId) return;
+                if (!remotePlayers.has(id)) {
+                    loadRemotePlayer(id);
+                }
+            });
+
+            // 2. Удаляем ушедших
+            remotePlayers.forEach((data, id) => {
+                if (!states.has(id)) {
+                    scene.remove(data.model);
+                    remotePlayers.delete(id);
+                }
+            });
+
+            // 3. Обновляем данные существующих
+            states.forEach((state, id) => {
+                if (id === myId || !state.pos) return;
+                const player = remotePlayers.get(id);
+                if (player) {
+                    player.targetPos = new THREE.Vector3(state.pos.x, state.pos.y, state.pos.z);
+                    player.targetRot = new THREE.Quaternion(state.rot.x, state.rot.y, state.rot.z, state.rot.w);
+                    player.targetAnim = state.anim;
+                }
+            });
+        });
+
+        window.addEventListener('keydown', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; if(e.key === 'Shift') keys.shift = true; });
+        window.addEventListener('keyup', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; if(e.key === 'Shift') keys.shift = false; });
+        window.addEventListener('resize', onWindowResize);
+    }
+
+    function createTextLabel(text, color = '#ffffff') {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 512; canvas.height = 128;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.roundRect(50, 20, 412, 88, 20);
+        ctx.fill();
+        ctx.font = 'bold 40px monospace';
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.fillText(text, 256, 75);
+        
+        const tex = new THREE.CanvasTexture(canvas);
+        const mat = new THREE.SpriteMaterial({ map: tex });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(3, 0.75, 1);
+        sprite.position.y = 2.4;
+        return sprite;
+    }
+
+    function setupAnimations(clips, mixer, storage) {
+        clips.forEach(clip => {
+            const n = clip.name.toLowerCase();
+            let type = n.includes('idle') ? 'idle' : n.includes('run') ? 'run' : n.includes('walk') ? 'walk' : null;
+            if (type) {
+                const action = mixer.clipAction(clip);
+                storage[type] = action;
+                action.play();
+                action.setEffectiveWeight(type === 'idle' ? 1 : 0);
+            }
+        });
+    }
+
+    function loadRemotePlayer(id) {
+        const loader = new GLTFLoader();
+        // Временная заглушка данных, чтобы не было ошибки до загрузки модели
+        remotePlayers.set(id, { model: new THREE.Group(), loading: true });
+
+        loader.load(RICK_MODEL_URL, (gltf) => {
+            const model = gltf.scene;
+            scene.add(model);
+            
+            const label = createTextLabel(`RICK [${id}]`, '#ffffff');
+            model.add(label);
+
+            const mixer = new THREE.AnimationMixer(model);
+            const actions = { idle: null, walk: null, run: null };
+            setupAnimations(gltf.animations, mixer, actions);
+
+            remotePlayers.set(id, {
+                model, mixer, actions,
+                targetPos: new THREE.Vector3(),
+                targetRot: new THREE.Quaternion(),
+                targetAnim: 'idle'
+            });
+        });
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function updateLocal(delta) {
+        if (!localModel) return;
+
+        const isMoving = keys.w || keys.a || keys.s || keys.d;
+        const currentAnim = isMoving ? (keys.shift ? 'run' : 'walk') : 'idle';
+
+        // Анимации
+        Object.keys(localActions).forEach(k => {
+            const act = localActions[k];
+            if (act) act.setEffectiveWeight(THREE.MathUtils.lerp(act.getEffectiveWeight(), k === currentAnim ? 1 : 0, delta * 10));
+        });
+
+        // Движение
+        if (isMoving) {
+            const angle = Math.atan2(camera.position.x - localModel.position.x, camera.position.z - localModel.position.z);
+            let offset = 0;
+            if (keys.w) {
+                if (keys.a) offset = Math.PI/4; else if (keys.d) offset = -Math.PI/4;
+            } else if (keys.s) {
+                if (keys.a) offset = Math.PI*0.75; else if (keys.d) offset = -Math.PI*0.75; else offset = Math.PI;
+            } else if (keys.a) offset = Math.PI/2; else if (keys.d) offset = -Math.PI/2;
+
+            rotateQuaternion.setFromAxisAngle(new THREE.Vector3(0,1,0), angle + offset + Math.PI);
+            localModel.quaternion.rotateTowards(rotateQuaternion, 0.2);
+
+            const speed = keys.shift ? 6 : 2.5;
+            walkDirection.set(0,0,1).applyQuaternion(localModel.quaternion);
+            localModel.position.addScaledVector(walkDirection, speed * delta);
+        }
+
+        // ОТПРАВКА В AWARENESS (вместо Y.Map)
+        awareness.setLocalState({
+            pos: { x: localModel.position.x, y: localModel.position.y, z: localModel.position.z },
+            rot: { x: localModel.quaternion.x, y: localModel.quaternion.y, z: localModel.quaternion.z, w: localModel.quaternion.w },
+            anim: currentAnim
+        });
+
+        cameraTarget.set(localModel.position.x, localModel.position.y + 1.5, localModel.position.z);
+        controls.target.lerp(cameraTarget, 0.1);
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+
+        if (localMixer) localMixer.update(delta);
+        updateLocal(delta);
+
+        // Обновление удаленных игроков
+        remotePlayers.forEach(p => {
+            if (p.loading || !p.mixer) return;
+            p.mixer.update(delta);
+            p.model.position.lerp(p.targetPos, 0.2);
+            p.model.quaternion.slerp(p.targetRot, 0.2);
+            
+            Object.keys(p.actions).forEach(k => {
+                const act = p.actions[k];
+                if (act) act.setEffectiveWeight(THREE.MathUtils.lerp(act.getEffectiveWeight(), k === p.targetAnim ? 1 : 0, delta * 10));
+            });
+        });
+
+        controls.update();
+        renderer.render(scene, camera);
+    }
+</script>
+</body>
+</html>
