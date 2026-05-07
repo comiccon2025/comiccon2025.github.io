@@ -218,7 +218,7 @@
 
 <!-- P2P граф -->
 <div id="p2p-graph-container">
-    <canvas id="p2p-graph" width="220" height="180"></canvas>
+    <canvas id="p2p-graph" width="220" height="200"></canvas>
 </div>
 
 <div id="interaction-menu">
@@ -347,7 +347,7 @@
         graphCtx.font = 'bold 10px sans-serif';
         graphCtx.fillStyle = '#666';
         graphCtx.textAlign = 'center';
-        graphCtx.fillText(`Игроки (${ids.length})`, centerX, h - 5);
+        graphCtx.fillText(`Игроки (${ids.length})`, centerX, h - 10);
     }
 
     // --- Three.js ---
@@ -585,22 +585,23 @@
 
         drawP2PGraph();
 
+        // Обработчики ввода
         window.addEventListener('keydown', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; if(e.key === 'Shift') keys.shift = true; });
         window.addEventListener('keyup', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; if(e.key === 'Shift') keys.shift = false; });
         window.addEventListener('resize', onWindowResize);
-        window.addEventListener('mousedown', onMouseDown);
 
-        // Закрытие меню при клике вне
-        window.addEventListener('click', (e) => {
-            if (!e.target.closest('#interaction-menu') && !e.target.closest('#chat-modal')) {
+        // Обработчик клика по canvas для определения попадания в игрока
+        renderer.domElement.addEventListener('mousedown', onCanvasMouseDown);
+
+        // Скрытие меню при клике вне его (на документе)
+        document.addEventListener('mousedown', (e) => {
+            if (!e.target.closest('#interaction-menu')) {
                 hideMenu();
             }
         });
     }
 
-    function onMouseDown(event) {
-        hideMenu();
-
+    function onCanvasMouseDown(event) {
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
@@ -626,7 +627,9 @@
                 // Сохраняем цель для чата
                 currentTargetId = targetModel.userData.playerId;
                 currentTargetNick = pData.nick;
-                event.preventDefault();
+
+                // Предотвращаем всплытие, чтобы глобальный обработчик скрытия не сработал
+                event.stopPropagation();
             }
         }
     }
