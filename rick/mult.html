@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Character Controller — Multiplayer</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #1a1a1a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        #ui {
+            position: absolute; top: 20px; left: 20px; color: #333;
+            background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 12px;
+            pointer-events: none; border: 1px solid rgba(0,0,0,0.1);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15); z-index: 10; transition: opacity 0.5s;
+        }
+        kbd {
+            background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px;
+            padding: 2px 8px; font-size: 0.9em; font-weight: bold; box-shadow: 0 2px 0 #bbb;
+        }
+        #loader-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #111; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 100;
+            transition: opacity 0.8s ease-out;
+        }
+        .loader-bar-container {
+            width: 300px; height: 4px; background: #333; border-radius: 2px;
+            margin-top: 20px; overflow: hidden;
+        }
+        #loader-bar {
+            width: 0%; height: 100%; background: #00ff88;
+            box-shadow: 0 0 15px #00ff88; transition: width 0.3s;
+        }
+        .loader-text { color: #fff; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; }
+
+        /* Отладочная панель */
+        #debug-panel {
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(0,0,0,0.75); color: #0f0; padding: 12px 16px;
+            border-radius: 8px; font-family: monospace; font-size: 13px;
+            z-index: 20; pointer-events: none;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            border: 1px solid #0f0;
+        }
+    </style>
+</head>
+<body>
+
+<div id="loader-screen">
+    <div class="loader-text">Синхронизация с реальностью...</div>
+    <div class="loader-bar-container">
+        <div id="loader-bar"></div>
+    </div>
+</div>
+
+<div id="ui">
+    <p style="margin: 0;"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> — Движение</p>
+    <p style="margin: 8px 0 0 0;"><kbd>Shift</kbd> — Бег</p>
+</div>
+
+<div id="debug-panel">
+    <div id="debug-status">Статус: поиск...</div>
+    <div id="debug-peers">Пиры: 0</div>
+    <div id="debug-client">Мой ID: -</div>
+    <div id="debug-remote">Удалённых игроков: 0</div>
+</div>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+            "yjs": "https://cdn.jsdelivr.net/npm/yjs@13/+esm",
+            "y-webrtc": "https://cdn.jsdelivr.net/npm/y-webrtc@10/+esm"
+        }
+    }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import * as Y from 'yjs';
+    import { WebrtcProvider } from 'y-webrtc';
+
+    // ---------- ОТЛАДОЧНЫЕ ЭЛЕМЕНТЫ ----------
+    const debugStatus = document.getElementById('debug-status');
+    const debugPeers = document.getElementById('debug-peers');
+    const debugClient = document.getElementById('debug-client');
+    const debugRemote = document.getElementById('debug-remote');
+
+    // ---------- ИНИЦИАЛИЗАЦИЯ YJS ----------
+    const roomName = 'gta3d-multiplayer-demo';
+    const ydoc = new Y.Doc();
+    const provider = new WebrtcProvider(roomName, ydoc, {
+        signaling: ['wss://signaling.yjs.dev', 'wss://y-webrtc-signaling-europe.glitch.me']
+    });
+
+    const playersMap = ydoc.getMap('players');
+    const remotePlayers = new Map(); // clientID -> THREE.Group
+
+    // Обработчики событий провайдера для отладки
+    provider.on('peers', (peers) => {
+        debugPeers.textContent = 'Пиры: ' + peers.size;
+        if (peers.size > 0) {
+            debugStatus.textContent = 'Статус: connected';
+            debugStatus.style.color = '#0f0';
+        } else {
+            debugStatus.textContent = 'Статус: поиск...';
+            debugStatus.style.color = '#ff0';
+        }
+    });
+
+    provider.on('synced', (synced) => {
+        console.log('synced', synced);
+    });
+
+    // Отображение clientID
+    const clientId = ydoc.clientID;
+    debugClient.textContent = 'Мой ID: ' + clientId;
+
+    // ---------- THREE.JS НАСТРОЙКИ ----------
+    let scene, camera, renderer, clock, controls;
+    let model, mixer;
+    let currentBaseAction = 'idle';
+
+    const baseActions = {
+        idle: { weight: 1, action: null },
+        walk: { weight: 0, action: null },
+        run: { weight: 0, action: null }
+    };
+
+    const keys = { w: false, a: false, s: false, d: false, shift: false };
+    const walkDirection = new THREE.Vector3();
+    const rotateQuaternion = new THREE.Quaternion();
+    const cameraTarget = new THREE.Vector3();
+    let lastSendTime = 0;
+
+    const loadingManager = new THREE.LoadingManager();
+    const loaderBar = document.getElementById('loader-bar');
+    const loaderScreen = document.getElementById('loader-screen');
+
+    loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+        const progress = (itemsLoaded / itemsTotal) * 100;
+        loaderBar.style.width = progress + '%';
+    };
+
+    loadingManager.onLoad = () => {
+        setTimeout(() => {
+            loaderScreen.style.opacity = '0';
+            setTimeout(() => loaderScreen.style.display = 'none', 800);
+        }, 500);
+    };
+
+    init();
+
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xa0a0a0);
+        scene.fog = new THREE.Fog(0xa0a0a0, 10, 50);
+
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 3, 8);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        clock = new THREE.Clock();
+
+        const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 3);
+        hemiLight.position.set(0, 20, 0);
+        scene.add(hemiLight);
+        const dirLight = new THREE.DirectionalLight(0xffffff, 3);
+        dirLight.position.set(3, 10, 10);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
+            new THREE.MeshPhongMaterial({ color: 0xcbcbcb, depthWrite: false })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+
+        const grid = new THREE.GridHelper(100, 40, 0x888888, 0xcccccc);
+        scene.add(grid);
+
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 4;
+        controls.maxDistance = 12;
+        controls.enablePan = false;
+        controls.maxPolarAngle = Math.PI / 2 - 0.1;
+        controls.minPolarAngle = Math.PI / 6;
+        controls.target.set(0, 1.6, 0);
+
+        const loader = new GLTFLoader(loadingManager);
+        const modelUrl = 'https://threejs.org/examples/models/gltf/Xbot.glb';
+
+        loader.load(modelUrl, (gltf) => {
+            model = gltf.scene;
+            scene.add(model);
+
+            model.traverse(object => {
+                if (object.isMesh) object.castShadow = true;
+            });
+
+            mixer = new THREE.AnimationMixer(model);
+
+            gltf.animations.forEach(clip => {
+                const name = clip.name.toLowerCase();
+                let key = '';
+                if (name.includes('idle')) key = 'idle';
+                else if (name.includes('walk')) key = 'walk';
+                else if (name.includes('run')) key = 'run';
+
+                if (key) {
+                    const action = mixer.clipAction(clip);
+                    baseActions[key].action = action;
+                    action.enabled = true;
+                    action.setEffectiveTimeScale(1);
+                    action.setEffectiveWeight(baseActions[key].weight);
+                    action.play();
+                }
+            });
+
+            animate();
+        });
+
+        // Наблюдение за изменениями карты игроков
+        playersMap.observe(event => {
+            event.changes.keys.forEach((change, clientId) => {
+                if (clientId === ydoc.clientID.toString()) return;
+
+                if (change.action === 'delete') {
+                    const mesh = remotePlayers.get(clientId);
+                    if (mesh) {
+                        scene.remove(mesh);
+                        remotePlayers.delete(clientId);
+                    }
+                    updateRemoteCount();
+                    return;
+                }
+
+                const playerData = playersMap.get(clientId);
+                if (!playerData) return;
+
+                let playerMesh = remotePlayers.get(clientId);
+                if (!playerMesh) {
+                    const group = new THREE.Group();
+                    const bodyGeo = new THREE.CylinderGeometry(0.3, 0.3, 1.4, 8);
+                    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3366ff });
+                    const body = new THREE.Mesh(bodyGeo, bodyMat);
+                    body.position.y = 0.7;
+                    body.castShadow = true;
+                    group.add(body);
+
+                    const headGeo = new THREE.SphereGeometry(0.3, 8, 8);
+                    const headMat = new THREE.MeshStandardMaterial({ color: 0xffccaa });
+                    const head = new THREE.Mesh(headGeo, headMat);
+                    head.position.y = 1.55;
+                    head.castShadow = true;
+                    group.add(head);
+
+                    const arrowGeo = new THREE.ConeGeometry(0.15, 0.5, 4);
+                    const arrowMat = new THREE.MeshStandardMaterial({ color: 0xff0000 });
+                    const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+                    arrow.position.set(0, 0.9, 0.4);
+                    arrow.rotation.x = Math.PI / 2;
+                    arrow.castShadow = true;
+                    group.add(arrow);
+
+                    scene.add(group);
+                    playerMesh = group;
+                    remotePlayers.set(clientId, group);
+                    updateRemoteCount();
+                }
+
+                const pos = playerData.position;
+                const quat = playerData.quaternion;
+                playerMesh.position.set(pos.x, pos.y, pos.z);
+                playerMesh.quaternion.set(quat.x, quat.y, quat.z, quat.w);
+            });
+        });
+
+        window.addEventListener('keydown', (e) => updateKey(e, true));
+        window.addEventListener('keyup', (e) => updateKey(e, false));
+        window.addEventListener('resize', onWindowResize);
+    }
+
+    function updateRemoteCount() {
+        debugRemote.textContent = 'Удалённых игроков: ' + remotePlayers.size;
+    }
+
+    function updateKey(event, isPressed) {
+        const key = event.key.toLowerCase();
+        if (key === 'w' || key === 'a' || key === 's' || key === 'd') {
+            keys[key] = isPressed;
+            event.preventDefault();
+        }
+        if (key === 'shift') {
+            keys.shift = isPressed;
+            event.preventDefault();
+        }
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function updateCharacter(delta) {
+        if (!model || !mixer) return;
+
+        const isMoving = keys.w || keys.a || keys.s || keys.d;
+        const isRunning = keys.shift && isMoving;
+
+        let desiredAction = 'idle';
+        if (isMoving) {
+            desiredAction = isRunning ? 'run' : 'walk';
+        }
+        currentBaseAction = desiredAction;
+
+        Object.keys(baseActions).forEach(key => {
+            const settings = baseActions[key];
+            if (!settings.action) return;
+            let targetWeight = (key === desiredAction) ? 1 : 0;
+            let currentWeight = settings.action.getEffectiveWeight();
+            if (currentWeight !== targetWeight) {
+                const step = delta * 7;
+                if (currentWeight < targetWeight) {
+                    settings.action.setEffectiveWeight(Math.min(1, currentWeight + step));
+                } else {
+                    settings.action.setEffectiveWeight(Math.max(0, currentWeight - step));
+                }
+            }
+        });
+
+        if (isMoving) {
+            const angleYCameraDirection = Math.atan2(
+                (camera.position.x - model.position.x),
+                (camera.position.z - model.position.z)
+            );
+            let directionOffset = 0;
+            if (keys.w) {
+                if (keys.a) directionOffset = Math.PI / 4;
+                else if (keys.d) directionOffset = -Math.PI / 4;
+            } else if (keys.s) {
+                if (keys.a) directionOffset = Math.PI * 3 / 4;
+                else if (keys.d) directionOffset = -Math.PI * 3 / 4;
+                else directionOffset = Math.PI;
+            } else if (keys.a) directionOffset = Math.PI / 2;
+            else if (keys.d) directionOffset = -Math.PI / 2;
+
+            rotateQuaternion.setFromAxisAngle(
+                new THREE.Vector3(0, 1, 0),
+                angleYCameraDirection + directionOffset + Math.PI
+            );
+            model.quaternion.rotateTowards(rotateQuaternion, 0.2);
+
+            const speed = isRunning ? 5.5 : 2.4;
+            walkDirection.set(0, 0, 1).applyQuaternion(model.quaternion);
+            model.position.addScaledVector(walkDirection, speed * delta);
+        }
+
+        cameraTarget.set(model.position.x, model.position.y + 1.6, model.position.z);
+        const currentTarget = controls.target.clone();
+        currentTarget.lerp(cameraTarget, 0.1);
+        controls.target.copy(currentTarget);
+
+        if (Date.now() - lastSendTime > 50) {
+            playersMap.set(ydoc.clientID.toString(), {
+                position: {
+                    x: model.position.x,
+                    y: model.position.y,
+                    z: model.position.z
+                },
+                quaternion: {
+                    x: model.quaternion.x,
+                    y: model.quaternion.y,
+                    z: model.quaternion.z,
+                    w: model.quaternion.w
+                },
+                animation: currentBaseAction
+            });
+            lastSendTime = Date.now();
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+
+        if (mixer) mixer.update(delta);
+        updateCharacter(delta);
+
+        controls.update();
+        renderer.render(scene, camera);
+    }
+</script>
+</body>
+</html>
