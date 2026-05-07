@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Multiplayer - Interaction & Clean UI</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #f0f0f0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        /* Прозрачный контейнер для P2P-графа */
+        #p2p-graph-container {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: transparent;
+            border: none;
+            box-shadow: none;
+            z-index: 10;
+            cursor: pointer;
+            user-select: none;
+            padding: 0;
+        }
+        #p2p-graph-container:hover {
+            transform: scale(1.05);
+        }
+        #p2p-graph {
+            display: block;
+        }
+
+        /* Контекстное меню взаимодействия */
+        #interaction-menu {
+            display: none;
+            position: fixed;
+            background: white;
+            padding: 10px;
+            border-radius: 12px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.2);
+            z-index: 2000;
+            min-width: 180px;
+        }
+        .menu-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: background 0.2s;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .menu-item:hover {
+            background: #f0f7ff;
+            color: #007bff;
+        }
+        .menu-item.disabled {
+            color: #ccc;
+            cursor: not-allowed;
+        }
+        .menu-header {
+            font-weight: bold;
+            padding: 5px 15px 10px;
+            border-bottom: 1px solid #eee;
+            margin-bottom: 5px;
+            color: #666;
+        }
+
+        #nickname-modal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            z-index: 3000;
+            text-align: center;
+        }
+        #nickname-modal input {
+            padding: 10px;
+            width: 200px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 16px;
+            outline: none;
+        }
+        #nickname-modal button {
+            padding: 10px 25px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        #loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #fff;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 100;
+        }
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #007bff;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+
+<div id="loading-overlay">
+    <div class="spinner"></div>
+    <p>Загрузка мира...</p>
+</div>
+
+<!-- P2P граф как легенда количества игроков -->
+<div id="p2p-graph-container">
+    <canvas id="p2p-graph" width="220" height="180"></canvas>
+</div>
+
+<div id="interaction-menu">
+    <div class="menu-header" id="target-name">Игрок</div>
+    <div class="menu-item" onclick="startChat()">💬 Написать сообщение</div>
+    <div class="menu-item" onclick="sendFile()">📁 Отправить файл</div>
+    <div class="menu-item disabled">📞 Голосовой чат (Beta)</div>
+    <div class="menu-item disabled">🎥 Видео звонок (Beta)</div>
+</div>
+
+<div id="nickname-modal">
+    <h3>Введите ваш никнейм</h3>
+    <input type="text" id="nick-input" placeholder="Имя игрока" maxlength="12">
+    <br>
+    <button onclick="saveNickname()">Сохранить</button>
+</div>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+            "yjs": "https://cdn.jsdelivr.net/npm/yjs@13.6.10/+esm",
+            "y-webrtc": "https://cdn.jsdelivr.net/npm/y-webrtc@10.3.0/+esm"
+        }
+    }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import * as Y from 'yjs';
+    import { WebrtcProvider } from 'y-webrtc';
+
+    // --- Сетевая часть ---
+    const ydoc = new Y.Doc();
+    const provider = new WebrtcProvider('threejs-multiplayer-v4-room', ydoc, {
+        signaling: ['wss://signaling.yjs.dev']
+    });
+    const awareness = provider.awareness;
+    let myNickname = "Игрок " + awareness.clientID.toString().slice(-4);
+
+    // --- P2P Graph ---
+    const graphCanvas = document.getElementById('p2p-graph');
+    const graphCtx = graphCanvas.getContext('2d');
+
+    // Функция отрисовки P2P графа на canvas
+    function drawP2PGraph() {
+        if (!graphCtx) return;
+        const w = graphCanvas.width;
+        const h = graphCanvas.height;
+        graphCtx.clearRect(0, 0, w, h);
+
+        const states = awareness.getStates();
+        const ids = Array.from(states.keys());
+        const localId = awareness.clientID;
+
+        // Позиции узлов по кругу
+        const centerX = w / 2;
+        const centerY = h / 2 - 10;
+        const radius = Math.min(w, h) * 0.3;
+        const n = ids.length;
+
+        const positions = new Map();
+
+        ids.forEach((id, index) => {
+            const angle = (index / n) * Math.PI * 2 - Math.PI / 2;
+            const x = centerX + Math.cos(angle) * radius;
+            const y = centerY + Math.sin(angle) * radius;
+            positions.set(id, { x, y });
+        });
+
+        // Связи (каждый с каждым)
+        graphCtx.beginPath();
+        graphCtx.strokeStyle = '#ccc';
+        graphCtx.lineWidth = 1.5;
+        const idList = Array.from(positions.keys());
+        for (let i = 0; i < idList.length; i++) {
+            for (let j = i + 1; j < idList.length; j++) {
+                const p1 = positions.get(idList[i]);
+                const p2 = positions.get(idList[j]);
+                graphCtx.moveTo(p1.x, p1.y);
+                graphCtx.lineTo(p2.x, p2.y);
+            }
+        }
+        graphCtx.stroke();
+
+        // Узлы и ники
+        positions.forEach((pos, id) => {
+            const state = states.get(id);
+            const nick = state?.nick || id.toString().slice(-4);
+            const isLocal = id === localId;
+
+            graphCtx.beginPath();
+            graphCtx.arc(pos.x, pos.y, 14, 0, Math.PI * 2);
+            graphCtx.fillStyle = isLocal ? '#007bff' : '#28a745';
+            graphCtx.fill();
+            graphCtx.strokeStyle = '#fff';
+            graphCtx.lineWidth = 2;
+            graphCtx.stroke();
+
+            graphCtx.font = 'bold 11px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
+            graphCtx.fillStyle = '#333';
+            graphCtx.textAlign = 'center';
+            graphCtx.textBaseline = 'top';
+            let displayNick = nick.length > 8 ? nick.slice(0, 7) + '…' : nick;
+            graphCtx.fillText(displayNick, pos.x, pos.y + 20);
+        });
+
+        // Заголовок
+        graphCtx.font = 'bold 10px sans-serif';
+        graphCtx.fillStyle = '#666';
+        graphCtx.textAlign = 'center';
+        graphCtx.fillText(`Игроки (${ids.length})`, centerX, h - 5);
+    }
+
+    // --- Three.js ---
+    let scene, camera, renderer, clock, controls, raycaster, mouse;
+    let localModel, localMixer;
+    let remotePlayers = new Map();
+
+    const localActions = { idle: null, walk: null, run: null };
+    const keys = { w: false, a: false, s: false, d: false, shift: false };
+
+    const walkDirection = new THREE.Vector3();
+    const rotateQuaternion = new THREE.Quaternion();
+    const cameraTarget = new THREE.Vector3();
+
+    const RICK_MODEL_URL = 'https://threejs.org/examples/models/gltf/Xbot.glb';
+
+    // Обработчик клика по графу для смены ника
+    graphCanvas.parentElement.addEventListener('click', (e) => {
+        if (e.target === graphCanvas || e.target === graphCanvas.parentElement) {
+            openNickModal();
+        }
+    });
+
+    window.openNickModal = () => {
+        document.getElementById('nick-input').value = myNickname;
+        document.getElementById('nickname-modal').style.display = 'block';
+    };
+
+    window.saveNickname = () => {
+        const val = document.getElementById('nick-input').value.trim();
+        if (val) {
+            myNickname = val;
+            updateLocalState();
+            if (localModel) {
+                const oldLabel = localModel.getObjectByName('label');
+                if (oldLabel) localModel.remove(oldLabel);
+                const newLabel = createTextLabel(myNickname, '#007bff');
+                newLabel.name = 'label';
+                localModel.add(newLabel);
+            }
+            drawP2PGraph(); // обновить граф с новым ником
+        }
+        document.getElementById('nickname-modal').style.display = 'none';
+    };
+
+    // Функции взаимодействия
+    window.startChat = () => { alert("Функция чата будет доступна в следующем обновлении!"); hideMenu(); };
+    window.sendFile = () => { alert("Выбор файла..."); hideMenu(); };
+    function hideMenu() { document.getElementById('interaction-menu').style.display = 'none'; }
+
+    init();
+
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xe0e0e0);
+        scene.fog = new THREE.Fog(0xe0e0e0, 15, 60);
+
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 3, 10);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        clock = new THREE.Clock();
+        raycaster = new THREE.Raycaster();
+        mouse = new THREE.Vector2();
+
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x888888, 2));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        dirLight.position.set(5, 12, 8);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(200, 200),
+            new THREE.MeshPhongMaterial({ color: 0xcccccc, depthWrite: false })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+        scene.add(new THREE.GridHelper(100, 50, 0xbbbbbb, 0xdddddd));
+
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.maxDistance = 20;
+        controls.target.set(0, 1, 0);
+
+        const loader = new GLTFLoader();
+        loader.load(RICK_MODEL_URL, (gltf) => {
+            localModel = gltf.scene;
+            scene.add(localModel);
+            localModel.traverse(c => { if (c.isMesh) { c.castShadow = true; c.userData.isPlayer = true; } });
+
+            const label = createTextLabel(myNickname, '#007bff');
+            label.name = 'label';
+            localModel.add(label);
+
+            localMixer = new THREE.AnimationMixer(localModel);
+            setupAnimations(gltf.animations, localMixer, localActions);
+
+            document.getElementById('loading-overlay').style.display = 'none';
+            animate();
+        });
+
+        awareness.on('change', () => {
+            const states = awareness.getStates();
+            const activeIds = Array.from(states.keys());
+
+            // Обновляем P2P граф
+            drawP2PGraph();
+
+            activeIds.forEach(id => {
+                if (id === awareness.clientID) return;
+                const state = states.get(id);
+                if (!remotePlayers.has(id)) {
+                    loadRemotePlayer(id, state.nick || "Игрок");
+                } else {
+                    const p = remotePlayers.get(id);
+                    if (state.pos) {
+                        p.targetPos.set(state.pos.x, state.pos.y, state.pos.z);
+                        p.targetRot.set(state.rot.x, state.rot.y, state.rot.z, state.rot.w);
+                        p.targetAnim = state.anim;
+                        if (state.nick && state.nick !== p.nick) {
+                            p.nick = state.nick;
+                            const oldLabel = p.model.getObjectByName('label');
+                            if (oldLabel) p.model.remove(oldLabel);
+                            const newLabel = createTextLabel(p.nick, '#444');
+                            newLabel.name = 'label';
+                            p.model.add(newLabel);
+                        }
+                    }
+                }
+            });
+
+            remotePlayers.forEach((data, id) => {
+                if (!states.has(id)) {
+                    scene.remove(data.model);
+                    remotePlayers.delete(id);
+                }
+            });
+        });
+
+        // Первичная отрисовка графа
+        drawP2PGraph();
+
+        window.addEventListener('keydown', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; if(e.key === 'Shift') keys.shift = true; });
+        window.addEventListener('keyup', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; if(e.key === 'Shift') keys.shift = false; });
+        window.addEventListener('resize', onWindowResize);
+        window.addEventListener('mousedown', onMouseDown);
+    }
+
+    function onMouseDown(event) {
+        // Скрываем меню при новом клике
+        hideMenu();
+
+        mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+        mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        raycaster.setFromCamera(mouse, camera);
+
+        // Проверка клика на других игроков
+        const playerObjects = [];
+        remotePlayers.forEach(p => { if(!p.loading) playerObjects.push(p.model); });
+
+        const intersects = raycaster.intersectObjects(playerObjects, true);
+        if (intersects.length > 0) {
+            let targetModel = intersects[0].object;
+            // Находим корневой объект игрока
+            while(targetModel.parent && !targetModel.userData.playerId) {
+                targetModel = targetModel.parent;
+            }
+
+            if (targetModel.userData.playerId) {
+                const pData = remotePlayers.get(targetModel.userData.playerId);
+                const menu = document.getElementById('interaction-menu');
+                document.getElementById('target-name').innerText = pData.nick;
+                menu.style.left = event.clientX + 'px';
+                menu.style.top = event.clientY + 'px';
+                menu.style.display = 'block';
+                event.preventDefault();
+            }
+        }
+    }
+
+    function createTextLabel(text, color = '#333333') {
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = 512; canvas.height = 128;
+
+        ctx.font = 'bold 42px sans-serif';
+        ctx.fillStyle = color;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.strokeStyle = 'white';
+        ctx.lineWidth = 6;
+        ctx.strokeText(text, 256, 64);
+        ctx.fillText(text, 256, 64);
+
+        const tex = new THREE.CanvasTexture(canvas);
+        const mat = new THREE.SpriteMaterial({ map: tex });
+        const sprite = new THREE.Sprite(mat);
+        sprite.scale.set(2.5, 0.6, 1);
+        sprite.position.y = 2.4;
+        return sprite;
+    }
+
+    function setupAnimations(clips, mixer, storage) {
+        clips.forEach(clip => {
+            const n = clip.name.toLowerCase();
+            let type = n.includes('idle') ? 'idle' : n.includes('run') ? 'run' : n.includes('walk') ? 'walk' : null;
+            if (type) {
+                const action = mixer.clipAction(clip);
+                storage[type] = action;
+                action.play();
+                action.setEffectiveWeight(type === 'idle' ? 1 : 0);
+            }
+        });
+    }
+
+    function loadRemotePlayer(id, nick) {
+        const loader = new GLTFLoader();
+        remotePlayers.set(id, { model: new THREE.Group(), loading: true, nick: nick });
+
+        loader.load(RICK_MODEL_URL, (gltf) => {
+            const model = gltf.scene;
+            model.userData.playerId = id;
+            scene.add(model);
+            model.traverse(c => { if(c.isMesh) c.userData.isPlayer = true; });
+
+            const label = createTextLabel(nick, '#444');
+            label.name = 'label';
+            model.add(label);
+
+            const mixer = new THREE.AnimationMixer(model);
+            const actions = { idle: null, walk: null, run: null };
+            setupAnimations(gltf.animations, mixer, actions);
+
+            remotePlayers.set(id, {
+                model, mixer, actions, nick,
+                targetPos: new THREE.Vector3(),
+                targetRot: new THREE.Quaternion(),
+                targetAnim: 'idle'
+            });
+        });
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function updateLocalState() {
+        if (!localModel) return;
+        const isMoving = keys.w || keys.a || keys.s || keys.d;
+        const currentAnim = isMoving ? (keys.shift ? 'run' : 'walk') : 'idle';
+
+        awareness.setLocalState({
+            pos: { x: localModel.position.x, y: localModel.position.y, z: localModel.position.z },
+            rot: { x: localModel.quaternion.x, y: localModel.quaternion.y, z: localModel.quaternion.z, w: localModel.quaternion.w },
+            anim: currentAnim,
+            nick: myNickname
+        });
+    }
+
+    function updateLocal(delta) {
+        if (!localModel) return;
+
+        const isMoving = keys.w || keys.a || keys.s || keys.d;
+        const currentAnim = isMoving ? (keys.shift ? 'run' : 'walk') : 'idle';
+
+        Object.keys(localActions).forEach(k => {
+            const act = localActions[k];
+            if (act) act.setEffectiveWeight(THREE.MathUtils.lerp(act.getEffectiveWeight(), k === currentAnim ? 1 : 0, delta * 10));
+        });
+
+        if (isMoving) {
+            const angle = Math.atan2(camera.position.x - localModel.position.x, camera.position.z - localModel.position.z);
+            let offset = 0;
+            if (keys.w) {
+                if (keys.a) offset = Math.PI/4; else if (keys.d) offset = -Math.PI/4;
+            } else if (keys.s) {
+                if (keys.a) offset = Math.PI*0.75; else if (keys.d) offset = -Math.PI*0.75; else offset = Math.PI;
+            } else if (keys.a) offset = Math.PI/2; else if (keys.d) offset = -Math.PI/2;
+
+            rotateQuaternion.setFromAxisAngle(new THREE.Vector3(0,1,0), angle + offset + Math.PI);
+            localModel.quaternion.rotateTowards(rotateQuaternion, 0.2);
+
+            const speed = keys.shift ? 6 : 2.5;
+            walkDirection.set(0,0,1).applyQuaternion(localModel.quaternion);
+            localModel.position.addScaledVector(walkDirection, speed * delta);
+        }
+
+        updateLocalState();
+
+        cameraTarget.set(localModel.position.x, localModel.position.y + 1.5, localModel.position.z);
+        controls.target.lerp(cameraTarget, 0.1);
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+
+        if (localMixer) localMixer.update(delta);
+        updateLocal(delta);
+
+        remotePlayers.forEach(p => {
+            if (p.loading || !p.mixer) return;
+            p.mixer.update(delta);
+            p.model.position.lerp(p.targetPos, 0.2);
+            p.model.quaternion.slerp(p.targetRot, 0.2);
+
+            Object.keys(p.actions).forEach(k => {
+                const act = p.actions[k];
+                if (act) act.setEffectiveWeight(THREE.MathUtils.lerp(act.getEffectiveWeight(), k === p.targetAnim ? 1 : 0, delta * 10));
+            });
+        });
+
+        controls.update();
+        renderer.render(scene, camera);
+    }
+</script>
+</body>
+</html>
