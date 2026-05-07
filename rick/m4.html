@@ -69,6 +69,7 @@
             color: #666;
         }
 
+        /* Модалка ника */
         #nickname-modal {
             display: none;
             position: fixed;
@@ -97,6 +98,86 @@
             color: white;
             border: none;
             border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* Модалка чата */
+        #chat-modal {
+            display: none;
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 320px;
+            max-height: 400px;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 5px 25px rgba(0,0,0,0.25);
+            z-index: 2500;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        #chat-header {
+            background: #007bff;
+            color: white;
+            padding: 12px 16px;
+            font-weight: bold;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        #chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 12px;
+            background: #f9f9f9;
+            min-height: 150px;
+            max-height: 250px;
+            font-size: 14px;
+        }
+        .chat-msg {
+            margin-bottom: 8px;
+            padding: 6px 10px;
+            border-radius: 10px;
+            max-width: 80%;
+            word-wrap: break-word;
+        }
+        .chat-msg.mine {
+            background: #007bff;
+            color: white;
+            margin-left: auto;
+        }
+        .chat-msg.other {
+            background: #e5e5ea;
+            color: #333;
+        }
+        .chat-time {
+            font-size: 10px;
+            opacity: 0.7;
+            display: block;
+            margin-top: 2px;
+        }
+        #chat-input-area {
+            display: flex;
+            border-top: 1px solid #eee;
+            padding: 8px;
+            background: white;
+        }
+        #chat-input {
+            flex: 1;
+            border: 1px solid #ddd;
+            border-radius: 20px;
+            padding: 8px 14px;
+            outline: none;
+            font-size: 14px;
+        }
+        #chat-send {
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 8px 16px;
+            margin-left: 8px;
             cursor: pointer;
             font-weight: bold;
         }
@@ -135,7 +216,7 @@
     <p>Загрузка мира...</p>
 </div>
 
-<!-- P2P граф как легенда количества игроков -->
+<!-- P2P граф -->
 <div id="p2p-graph-container">
     <canvas id="p2p-graph" width="220" height="180"></canvas>
 </div>
@@ -153,6 +234,19 @@
     <input type="text" id="nick-input" placeholder="Имя игрока" maxlength="12">
     <br>
     <button onclick="saveNickname()">Сохранить</button>
+</div>
+
+<!-- Модальное окно чата -->
+<div id="chat-modal">
+    <div id="chat-header">
+        <span id="chat-partner">💬 Чат</span>
+        <span style="cursor:pointer" onclick="closeChat()">✖</span>
+    </div>
+    <div id="chat-messages"></div>
+    <div id="chat-input-area">
+        <input type="text" id="chat-input" placeholder="Сообщение..." maxlength="200">
+        <button id="chat-send" onclick="sendChatMessage()">→</button>
+    </div>
 </div>
 
 <script type="importmap">
@@ -181,11 +275,13 @@
     const awareness = provider.awareness;
     let myNickname = "Игрок " + awareness.clientID.toString().slice(-4);
 
+    // Yjs структура для сообщений чата
+    const chatMessages = ydoc.getArray('chatMessages');
+
     // --- P2P Graph ---
     const graphCanvas = document.getElementById('p2p-graph');
     const graphCtx = graphCanvas.getContext('2d');
 
-    // Функция отрисовки P2P графа на canvas
     function drawP2PGraph() {
         if (!graphCtx) return;
         const w = graphCanvas.width;
@@ -196,7 +292,6 @@
         const ids = Array.from(states.keys());
         const localId = awareness.clientID;
 
-        // Позиции узлов по кругу
         const centerX = w / 2;
         const centerY = h / 2 - 10;
         const radius = Math.min(w, h) * 0.3;
@@ -211,10 +306,10 @@
             positions.set(id, { x, y });
         });
 
-        // Связи (каждый с каждым)
+        // Рисуем связи — ЧЁРНЫЕ, непрозрачные
         graphCtx.beginPath();
-        graphCtx.strokeStyle = '#ccc';
-        graphCtx.lineWidth = 1.5;
+        graphCtx.strokeStyle = '#000000';
+        graphCtx.lineWidth = 2;
         const idList = Array.from(positions.keys());
         for (let i = 0; i < idList.length; i++) {
             for (let j = i + 1; j < idList.length; j++) {
@@ -269,7 +364,11 @@
 
     const RICK_MODEL_URL = 'https://threejs.org/examples/models/gltf/Xbot.glb';
 
-    // Обработчик клика по графу для смены ника
+    // Переменные для чата
+    let currentTargetId = null;
+    let currentTargetNick = '';
+
+    // Обработчики UI
     graphCanvas.parentElement.addEventListener('click', (e) => {
         if (e.target === graphCanvas || e.target === graphCanvas.parentElement) {
             openNickModal();
@@ -293,16 +392,103 @@
                 newLabel.name = 'label';
                 localModel.add(newLabel);
             }
-            drawP2PGraph(); // обновить граф с новым ником
+            drawP2PGraph();
         }
         document.getElementById('nickname-modal').style.display = 'none';
     };
 
     // Функции взаимодействия
-    window.startChat = () => { alert("Функция чата будет доступна в следующем обновлении!"); hideMenu(); };
-    window.sendFile = () => { alert("Выбор файла..."); hideMenu(); };
-    function hideMenu() { document.getElementById('interaction-menu').style.display = 'none'; }
+    window.startChat = () => {
+        if (currentTargetId) {
+            openChat(currentTargetId, currentTargetNick);
+        }
+        hideMenu();
+    };
 
+    window.sendFile = () => {
+        alert("Выбор файла...");
+        hideMenu();
+    };
+
+    function hideMenu() {
+        document.getElementById('interaction-menu').style.display = 'none';
+    }
+
+    // Работа с чатом
+    function openChat(targetId, nick) {
+        currentTargetId = targetId;
+        currentTargetNick = nick;
+        document.getElementById('chat-partner').innerText = `💬 ${nick}`;
+        document.getElementById('chat-modal').style.display = 'flex';
+        renderChatMessages();
+        document.getElementById('chat-input').focus();
+    }
+
+    window.closeChat = () => {
+        document.getElementById('chat-modal').style.display = 'none';
+        currentTargetId = null;
+        currentTargetNick = '';
+    };
+
+    window.sendChatMessage = () => {
+        const input = document.getElementById('chat-input');
+        const text = input.value.trim();
+        if (!text || !currentTargetId) return;
+
+        chatMessages.push([{
+            from: awareness.clientID,
+            to: currentTargetId,
+            text: text,
+            timestamp: Date.now()
+        }]);
+
+        input.value = '';
+        renderChatMessages();
+    };
+
+    // Подписка на изменения сообщений
+    chatMessages.observe(() => {
+        if (currentTargetId) {
+            renderChatMessages();
+        }
+    });
+
+    function renderChatMessages() {
+        const container = document.getElementById('chat-messages');
+        if (!container) return;
+        container.innerHTML = '';
+
+        const allMessages = chatMessages.toArray();
+        const relevant = allMessages.filter(msg => {
+            return (msg.from === awareness.clientID && msg.to === currentTargetId) ||
+                   (msg.from === currentTargetId && msg.to === awareness.clientID);
+        });
+
+        relevant.forEach(msg => {
+            const div = document.createElement('div');
+            div.className = `chat-msg ${msg.from === awareness.clientID ? 'mine' : 'other'}`;
+
+            const sender = msg.from === awareness.clientID ? 'Вы' : (currentTargetNick || 'Игрок');
+            const time = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            div.innerHTML = `<strong>${sender}:</strong> ${escapeHtml(msg.text)}<span class="chat-time">${time}</span>`;
+            container.appendChild(div);
+        });
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const map = {
+            '&': '&amp;',
+            '<': '&lt;',
+            '>': '&gt;',
+            '"': '&quot;',
+            "'": '&#039;'
+        };
+        return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    // Инициализация Three.js
     init();
 
     function init() {
@@ -364,7 +550,6 @@
             const states = awareness.getStates();
             const activeIds = Array.from(states.keys());
 
-            // Обновляем P2P граф
             drawP2PGraph();
 
             activeIds.forEach(id => {
@@ -398,31 +583,34 @@
             });
         });
 
-        // Первичная отрисовка графа
         drawP2PGraph();
 
         window.addEventListener('keydown', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; if(e.key === 'Shift') keys.shift = true; });
         window.addEventListener('keyup', (e) => { if (keys.hasOwnProperty(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; if(e.key === 'Shift') keys.shift = false; });
         window.addEventListener('resize', onWindowResize);
         window.addEventListener('mousedown', onMouseDown);
+
+        // Закрытие меню при клике вне
+        window.addEventListener('click', (e) => {
+            if (!e.target.closest('#interaction-menu') && !e.target.closest('#chat-modal')) {
+                hideMenu();
+            }
+        });
     }
 
     function onMouseDown(event) {
-        // Скрываем меню при новом клике
         hideMenu();
 
         mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
         mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
         raycaster.setFromCamera(mouse, camera);
 
-        // Проверка клика на других игроков
         const playerObjects = [];
         remotePlayers.forEach(p => { if(!p.loading) playerObjects.push(p.model); });
 
         const intersects = raycaster.intersectObjects(playerObjects, true);
         if (intersects.length > 0) {
             let targetModel = intersects[0].object;
-            // Находим корневой объект игрока
             while(targetModel.parent && !targetModel.userData.playerId) {
                 targetModel = targetModel.parent;
             }
@@ -434,6 +622,10 @@
                 menu.style.left = event.clientX + 'px';
                 menu.style.top = event.clientY + 'px';
                 menu.style.display = 'block';
+
+                // Сохраняем цель для чата
+                currentTargetId = targetModel.userData.playerId;
+                currentTargetNick = pData.nick;
                 event.preventDefault();
             }
         }
