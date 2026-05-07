@@ -306,9 +306,9 @@
             positions.set(id, { x, y });
         });
 
-        // Рисуем связи — ЧЁРНЫЕ, непрозрачные
+        // Рисуем связи — БЕЛЫЕ (#FFFFFF)
         graphCtx.beginPath();
-        graphCtx.strokeStyle = '#000000';
+        graphCtx.strokeStyle = '#FFFFFF';
         graphCtx.lineWidth = 2;
         const idList = Array.from(positions.keys());
         for (let i = 0; i < idList.length; i++) {
@@ -331,12 +331,12 @@
             graphCtx.arc(pos.x, pos.y, 14, 0, Math.PI * 2);
             graphCtx.fillStyle = isLocal ? '#007bff' : '#28a745';
             graphCtx.fill();
-            graphCtx.strokeStyle = '#fff';
+            graphCtx.strokeStyle = '#ffffff';
             graphCtx.lineWidth = 2;
             graphCtx.stroke();
 
             graphCtx.font = 'bold 11px "Segoe UI", Tahoma, Geneva, Verdana, sans-serif';
-            graphCtx.fillStyle = '#333';
+            graphCtx.fillStyle = '#ffffff';
             graphCtx.textAlign = 'center';
             graphCtx.textBaseline = 'top';
             let displayNick = nick.length > 8 ? nick.slice(0, 7) + '…' : nick;
@@ -345,7 +345,7 @@
 
         // Заголовок
         graphCtx.font = 'bold 10px sans-serif';
-        graphCtx.fillStyle = '#666';
+        graphCtx.fillStyle = '#ffffff';
         graphCtx.textAlign = 'center';
         graphCtx.fillText(`Игроки (${ids.length})`, centerX, h - 10);
     }
