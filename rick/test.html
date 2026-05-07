@@ -3,33 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Xbot Character Controller</title>
+    <title>3D GTA Style</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #a0a0a0; font-family: sans-serif; }
+        body { margin: 0; overflow: hidden; background-color: #1a1a1a; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        
+        /* Интерфейс управления */
         #ui {
             position: absolute; top: 20px; left: 20px; color: #333;
-            background: rgba(255, 255, 255, 0.8); padding: 15px; border-radius: 8px; 
-            pointer-events: none; border: 1px solid #ccc; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 12px; 
+            pointer-events: none; border: 1px solid rgba(0,0,0,0.1); 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+            z-index: 10; transition: opacity 0.5s;
         }
-        #instructions {
-            position: absolute; bottom: 20px; width: 100%; text-align: center;
-            color: #444; font-weight: bold; text-transform: uppercase;
-        }
+        
         kbd {
-            background: #eee; border: 1px solid #999; border-radius: 3px;
-            padding: 2px 6px; font-size: 0.9em;
+            background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px;
+            padding: 2px 8px; font-size: 0.9em; font-weight: bold; box-shadow: 0 2px 0 #bbb;
         }
+
+        /* Экран загрузки */
+        #loader-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #111; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 100;
+            transition: opacity 0.8s ease-out;
+        }
+        
+        .loader-bar-container {
+            width: 300px; height: 4px; background: #333; border-radius: 2px;
+            margin-top: 20px; overflow: hidden;
+        }
+        
+        #loader-bar {
+            width: 0%; height: 100%; background: #00ff88;
+            box-shadow: 0 0 15px #00ff88; transition: width 0.3s;
+        }
+        
+        .loader-text { color: #fff; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; }
     </style>
 </head>
 <body>
 
-<div id="ui">
-    <h3 style="margin:0 0 10px 0;">Управление Xbot</h3>
-    <p style="margin: 5px 0;"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> — Движение</p>
-    <p style="margin: 5px 0;"><kbd>Shift</kbd> — Бег</p>
-    <div id="status" style="color: #666; font-size: 0.85em; margin-top:10px;">Загрузка ресурсов...</div>
+<div id="loader-screen">
+    <div class="loader-text">Синхронизация с реальностью...</div>
+    <div class="loader-bar-container">
+        <div id="loader-bar"></div>
+    </div>
 </div>
-<div id="instructions">Используйте мышь для вращения камеры</div>
+
+<div id="ui">
+    <p style="margin: 0;"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> — Движение</p>
+    <p style="margin: 8px 0 0 0;"><kbd>Shift</kbd> — Бег</p>
+</div>
 
 <script type="importmap">
     {
@@ -46,21 +71,36 @@
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 
     let scene, camera, renderer, clock, controls;
-    let model, mixer, skeleton;
+    let model, mixer;
     
-    // Состояния анимаций
     let currentBaseAction = 'idle';
-    const allActions = [];
     const baseActions = {
-        idle: { weight: 1 },
-        walk: { weight: 0 },
-        run: { weight: 0 }
+        idle: { weight: 1, action: null },
+        walk: { weight: 0, action: null },
+        run: { weight: 0, action: null }
     };
 
     const keys = { w: false, a: false, s: false, d: false, shift: false };
     const walkDirection = new THREE.Vector3();
     const rotateQuaternion = new THREE.Quaternion();
     const cameraTarget = new THREE.Vector3();
+
+    // Менеджер загрузки
+    const loadingManager = new THREE.LoadingManager();
+    const loaderBar = document.getElementById('loader-bar');
+    const loaderScreen = document.getElementById('loader-screen');
+
+    loadingManager.onProgress = (url, itemsLoaded, itemsTotal) => {
+        const progress = (itemsLoaded / itemsTotal) * 100;
+        loaderBar.style.width = progress + '%';
+    };
+
+    loadingManager.onLoad = () => {
+        setTimeout(() => {
+            loaderScreen.style.opacity = '0';
+            setTimeout(() => loaderScreen.style.display = 'none', 800);
+        }, 500);
+    };
 
     init();
 
@@ -70,7 +110,7 @@
         scene.fog = new THREE.Fog(0xa0a0a0, 10, 50);
 
         camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
-        camera.position.set(0, 3, 10);
+        camera.position.set(0, 3, 8);
 
         renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setPixelRatio(window.devicePixelRatio);
@@ -80,7 +120,6 @@
 
         clock = new THREE.Clock();
 
-        // Освещение
         const hemiLight = new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 3);
         hemiLight.position.set(0, 20, 0);
         scene.add(hemiLight);
@@ -90,7 +129,6 @@
         dirLight.castShadow = true;
         scene.add(dirLight);
 
-        // Земля
         const floor = new THREE.Mesh(
             new THREE.PlaneGeometry(100, 100),
             new THREE.MeshPhongMaterial({ color: 0xcbcbcb, depthWrite: false })
@@ -102,17 +140,17 @@
         const grid = new THREE.GridHelper(100, 40, 0x888888, 0xcccccc);
         scene.add(grid);
 
-        // Контроллер камеры
         controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
-        controls.minDistance = 3;
-        controls.maxDistance = 20;
+        controls.dampingFactor = 0.05;
+        controls.minDistance = 4;
+        controls.maxDistance = 12;
         controls.enablePan = false;
-        controls.maxPolarAngle = Math.PI / 2 - 0.05;
+        controls.maxPolarAngle = Math.PI / 2 - 0.1;
+        controls.minPolarAngle = Math.PI / 6;
 
-        // Загрузка модели
-        const loader = new GLTFLoader();
-        const modelUrl = 'https://tripreport.github.io/3D/Xbot.glb';
+        const loader = new GLTFLoader(loadingManager);
+        const modelUrl = 'https://threejs.org/examples/models/gltf/Xbot.glb';
 
         loader.load(modelUrl, (gltf) => {
             model = gltf.scene;
@@ -124,34 +162,25 @@
 
             mixer = new THREE.AnimationMixer(model);
             
-            // Инициализация анимаций из файла
             gltf.animations.forEach(clip => {
                 const name = clip.name.toLowerCase();
-                let actionName = '';
-                
-                if (name.includes('idle')) actionName = 'idle';
-                else if (name.includes('walk')) actionName = 'walk';
-                else if (name.includes('run')) actionName = 'run';
+                let key = '';
+                if (name.includes('idle')) key = 'idle';
+                else if (name.includes('walk')) key = 'walk';
+                else if (name.includes('run')) key = 'run';
 
-                if (actionName && baseActions[actionName]) {
+                if (key) {
                     const action = mixer.clipAction(clip);
-                    baseActions[actionName].action = action;
-                    allActions.push(action);
-                    
-                    // Настройка веса по умолчанию
+                    baseActions[key].action = action;
                     action.enabled = true;
                     action.setEffectiveTimeScale(1);
-                    action.setEffectiveWeight(baseActions[actionName].weight);
+                    action.setEffectiveWeight(baseActions[key].weight);
                     action.play();
                 }
             });
 
-            document.getElementById('status').innerText = 'Система онлайн. Двигайтесь!';
             animate();
 
-        }, undefined, (error) => {
-            console.error(error);
-            document.getElementById('status').innerText = 'Ошибка загрузки модели.';
         });
 
         window.addEventListener('keydown', (e) => updateKey(e, true));
@@ -161,8 +190,8 @@
 
     function updateKey(event, isPressed) {
         const key = event.key.toLowerCase();
-        if (keys.hasOwnProperty(key)) keys[key] = isPressed;
-        if (event.shiftKey !== undefined) keys.shift = event.shiftKey;
+        if (key === 'w' || key === 'a' || key === 's' || key === 'd') keys[key] = isPressed;
+        if (key === 'shift') keys.shift = isPressed;
     }
 
     function onWindowResize() {
@@ -177,33 +206,35 @@
         const isMoving = keys.w || keys.a || keys.s || keys.d;
         const isRunning = keys.shift && isMoving;
 
-        // Определяем целевое состояние
         let desiredAction = 'idle';
         if (isMoving) {
             desiredAction = isRunning ? 'run' : 'walk';
         }
 
-        // Плавный переход между анимациями (Blending)
-        if (currentBaseAction !== desiredAction) {
-            const fromAction = baseActions[currentBaseAction].action;
-            const toAction = baseActions[desiredAction].action;
-
-            if (fromAction && toAction) {
-                fromAction.fadeOut(0.3);
-                toAction.reset().fadeIn(0.3).play();
-                currentBaseAction = desiredAction;
+        Object.keys(baseActions).forEach(key => {
+            const settings = baseActions[key];
+            if (!settings.action) return;
+            
+            let targetWeight = (key === desiredAction) ? 1 : 0;
+            let currentWeight = settings.action.getEffectiveWeight();
+            
+            if (currentWeight !== targetWeight) {
+                const step = delta * 7; 
+                if (currentWeight < targetWeight) {
+                    settings.action.setEffectiveWeight(Math.min(1, currentWeight + step));
+                } else {
+                    settings.action.setEffectiveWeight(Math.max(0, currentWeight - step));
+                }
             }
-        }
+        });
 
-        // Физика перемещения
         if (isMoving) {
-            // Расчет угла направления относительно камеры
             const angleYCameraDirection = Math.atan2(
                 (camera.position.x - model.position.x), 
                 (camera.position.z - model.position.z)
             );
             
-            let directionOffset = 0; // w
+            let directionOffset = 0; 
             if (keys.w) {
                 if (keys.a) directionOffset = Math.PI / 4;
                 else if (keys.d) directionOffset = -Math.PI / 4;
@@ -214,19 +245,22 @@
             } else if (keys.a) directionOffset = Math.PI / 2;
             else if (keys.d) directionOffset = -Math.PI / 2;
 
-            // Поворот модели
-            rotateQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), angleYCameraDirection + directionOffset);
-            model.quaternion.rotateTowards(rotateQuaternion, 0.15);
+            rotateQuaternion.setFromAxisAngle(
+                new THREE.Vector3(0, 1, 0), 
+                angleYCameraDirection + directionOffset + Math.PI
+            );
+            model.quaternion.rotateTowards(rotateQuaternion, 0.2);
 
-            // Движение
-            const speed = isRunning ? 5 : 2;
-            walkDirection.set(0, 0, -1).applyQuaternion(model.quaternion);
+            const speed = isRunning ? 5.5 : 2.4;
+            walkDirection.set(0, 0, 1).applyQuaternion(model.quaternion);
             model.position.addScaledVector(walkDirection, speed * delta);
         }
 
-        // Камера следует за персонажем
-        cameraTarget.set(model.position.x, model.position.y + 1, model.position.z);
-        controls.target.copy(cameraTarget);
+        cameraTarget.set(model.position.x, model.position.y + 1.6, model.position.z);
+        
+        const currentTarget = controls.target.clone();
+        currentTarget.lerp(cameraTarget, 0.1);
+        controls.target.copy(currentTarget);
     }
 
     function animate() {
