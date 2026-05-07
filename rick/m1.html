@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Multiplayer 3D Controller - Yjs + WebRTC</title>
+    <style>
+        body { margin: 0; overflow: hidden; background-color: #1a1a1a; font-family: 'Segoe UI', sans-serif; }
+        
+        #ui {
+            position: absolute; top: 20px; left: 20px; color: #333;
+            background: rgba(255, 255, 255, 0.9); padding: 15px; border-radius: 12px; 
+            pointer-events: none; border: 1px solid rgba(0,0,0,0.1); 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.15); z-index: 10;
+        }
+        
+        kbd {
+            background: #f0f0f0; border: 1px solid #ccc; border-radius: 4px;
+            padding: 2px 8px; font-size: 0.9em; font-weight: bold;
+        }
+
+        #loader-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #111; display: flex; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 100;
+            transition: opacity 0.8s ease-out;
+        }
+        
+        .loader-bar-container { width: 300px; height: 4px; background: #333; margin-top: 20px; overflow: hidden; }
+        #loader-bar { width: 0%; height: 100%; background: #00ff88; transition: width 0.3s; }
+        .loader-text { color: #fff; font-size: 14px; letter-spacing: 2px; text-transform: uppercase; }
+        
+        #player-count {
+            position: absolute; top: 20px; right: 20px; background: rgba(0,0,0,0.6);
+            color: #00ff88; padding: 10px 20px; border-radius: 20px; font-weight: bold;
+            backdrop-filter: blur(4px);
+        }
+    </style>
+</head>
+<body>
+
+<div id="loader-screen">
+    <div class="loader-text">Синхронизация...</div>
+    <div class="loader-bar-container"><div id="loader-bar"></div></div>
+</div>
+
+<div id="ui">
+    <p style="margin: 0;"><kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> — Движение</p>
+    <p style="margin: 8px 0 0 0;"><kbd>Shift</kbd> — Бег</p>
+</div>
+
+<div id="player-count">Загрузка сети...</div>
+
+<script type="importmap">
+    {
+        "imports": {
+            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/",
+            "yjs": "https://cdn.jsdelivr.net/npm/yjs@13.6.10/+esm",
+            "y-webrtc": "https://cdn.jsdelivr.net/npm/y-webrtc@10.3.0/+esm"
+        }
+    }
+</script>
+
+<script type="module">
+    import * as THREE from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import * as Y from 'yjs';
+    import { WebrtcProvider } from 'y-webrtc';
+
+    // --- Настройка Yjs ---
+    const ydoc = new Y.Doc();
+    const provider = new WebrtcProvider('threejs-multiplayer-v2-room', ydoc, {
+        signaling: ['wss://signaling.yjs.dev'] 
+    });
+    const remotePlayersState = ydoc.getMap('players');
+    const myId = provider.awareness.clientID.toString();
+
+    let scene, camera, renderer, clock, controls;
+    let localModel, localMixer, localLabel;
+    let remotePlayersModels = new Map();
+    
+    const localBaseActions = { idle: null, walk: null, run: null };
+    const keys = { w: false, a: false, s: false, d: false, shift: false };
+    const walkDirection = new THREE.Vector3();
+    const rotateQuaternion = new THREE.Quaternion();
+    const cameraTarget = new THREE.Vector3();
+
+    const loadingManager = new THREE.LoadingManager();
+    const loaderBar = document.getElementById('loader-bar');
+    const loaderScreen = document.getElementById('loader-screen');
+
+    loadingManager.onProgress = (url, loaded, total) => {
+        loaderBar.style.width = (loaded / total) * 100 + '%';
+    };
+
+    loadingManager.onLoad = () => {
+        setTimeout(() => {
+            loaderScreen.style.opacity = '0';
+            setTimeout(() => loaderScreen.style.display = 'none', 800);
+        }, 500);
+    };
+
+    // Функция создания текстовой метки (ID)
+    function createNameLabel(text, color = '#ffffff') {
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        canvas.width = 256;
+        canvas.height = 64;
+        
+        context.fillStyle = 'rgba(0, 0, 0, 0.5)';
+        context.roundRect(0, 0, 256, 64, 10);
+        context.fill();
+        
+        context.font = 'Bold 32px Arial';
+        context.fillStyle = color;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(text, 128, 32);
+
+        const texture = new THREE.CanvasTexture(canvas);
+        const spriteMaterial = new THREE.SpriteMaterial({ map: texture, transparent: true });
+        const sprite = new THREE.Sprite(spriteMaterial);
+        sprite.scale.set(2, 0.5, 1);
+        sprite.position.y = 2.2; // Над головой
+        return sprite;
+    }
+
+    init();
+
+    function init() {
+        scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xa0a0a0);
+        scene.fog = new THREE.Fog(0xa0a0a0, 10, 50);
+
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 100);
+        camera.position.set(0, 3, 8);
+
+        renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+
+        clock = new THREE.Clock();
+
+        scene.add(new THREE.HemisphereLight(0xffffff, 0x8d8d8d, 3));
+        const dirLight = new THREE.DirectionalLight(0xffffff, 3);
+        dirLight.position.set(3, 10, 10);
+        dirLight.castShadow = true;
+        scene.add(dirLight);
+
+        const floor = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 100),
+            new THREE.MeshPhongMaterial({ color: 0xcbcbcb, depthWrite: false })
+        );
+        floor.rotation.x = -Math.PI / 2;
+        floor.receiveShadow = true;
+        scene.add(floor);
+        scene.add(new THREE.GridHelper(100, 40, 0x888888, 0xcccccc));
+
+        controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.maxDistance = 12;
+        controls.maxPolarAngle = Math.PI / 2 - 0.1;
+
+        const loader = new GLTFLoader(loadingManager);
+        const modelUrl = 'https://threejs.org/examples/models/gltf/Xbot.glb';
+
+        loader.load(modelUrl, (gltf) => {
+            localModel = gltf.scene;
+            scene.add(localModel);
+            localModel.traverse(obj => { if (obj.isMesh) obj.castShadow = true; });
+
+            // Добавляем ID себе
+            localLabel = createNameLabel(`ID: ${myId}`, '#00ff88');
+            localModel.add(localLabel);
+
+            localMixer = new THREE.AnimationMixer(localModel);
+            setupAnimations(gltf.animations, localMixer, localBaseActions);
+            animate();
+        });
+
+        // Работа с Awareness для точного подсчета игроков
+        provider.awareness.on('change', () => {
+            const activeIds = Array.from(provider.awareness.getStates().keys()).map(id => id.toString());
+            document.getElementById('player-count').innerText = `Игроков в сети: ${activeIds.length}`;
+            
+            // Чистим Map и сцену от тех, кто не в awareness
+            remotePlayersModels.forEach((data, clientID) => {
+                if (!activeIds.includes(clientID)) {
+                    scene.remove(data.model);
+                    remotePlayersModels.delete(clientID);
+                }
+            });
+        });
+
+        // Отслеживание движений
+        remotePlayersState.observe(() => {
+            remotePlayersState.forEach((state, clientID) => {
+                if (clientID === myId) return;
+                
+                // Проверяем, существует ли игрок еще в awareness
+                const isAlive = provider.awareness.getStates().has(parseInt(clientID));
+                if (!isAlive) return;
+
+                if (!remotePlayersModels.has(clientID)) {
+                    createRemotePlayer(clientID);
+                } else {
+                    updateRemotePlayer(clientID, state);
+                }
+            });
+        });
+
+        window.addEventListener('keydown', (e) => updateKey(e, true));
+        window.addEventListener('keyup', (e) => updateKey(e, false));
+        window.addEventListener('resize', onWindowResize);
+    }
+
+    function setupAnimations(clips, mixer, actionsStorage) {
+        clips.forEach(clip => {
+            const name = clip.name.toLowerCase();
+            let key = name.includes('idle') ? 'idle' : name.includes('run') ? 'run' : name.includes('walk') ? 'walk' : null;
+            if (key) {
+                const action = mixer.clipAction(clip);
+                actionsStorage[key] = action;
+                action.play();
+                action.setEffectiveWeight(key === 'idle' ? 1 : 0);
+            }
+        });
+    }
+
+    function createRemotePlayer(id) {
+        const loader = new GLTFLoader();
+        loader.load('https://threejs.org/examples/models/gltf/Xbot.glb', (gltf) => {
+            const model = gltf.scene;
+            scene.add(model);
+            
+            // Метка над головой
+            const label = createNameLabel(`ID: ${id}`);
+            model.add(label);
+
+            const mixer = new THREE.AnimationMixer(model);
+            const actions = { idle: null, walk: null, run: null };
+            setupAnimations(gltf.animations, mixer, actions);
+            
+            remotePlayersModels.set(id, { model, mixer, actions });
+        });
+    }
+
+    function updateRemotePlayer(id, state) {
+        const data = remotePlayersModels.get(id);
+        if (!data) return;
+        
+        data.model.position.lerp(new THREE.Vector3(state.pos.x, state.pos.y, state.pos.z), 0.2);
+        data.model.quaternion.slerp(new THREE.Quaternion(state.rot.x, state.rot.y, state.rot.z, state.rot.w), 0.2);
+        
+        const desired = state.anim;
+        Object.keys(data.actions).forEach(key => {
+            const action = data.actions[key];
+            if (action) {
+                const targetWeight = (key === desired) ? 1 : 0;
+                action.setEffectiveWeight(THREE.MathUtils.lerp(action.getEffectiveWeight(), targetWeight, 0.2));
+            }
+        });
+    }
+
+    function updateKey(event, isPressed) {
+        const key = event.key.toLowerCase();
+        if (keys.hasOwnProperty(key)) keys[key] = isPressed;
+        if (key === 'shift') keys.shift = isPressed;
+    }
+
+    function onWindowResize() {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+    }
+
+    function updateLocalCharacter(delta) {
+        if (!localModel || !localMixer) return;
+
+        const isMoving = keys.w || keys.a || keys.s || keys.d;
+        const isRunning = keys.shift && isMoving;
+        let desiredAction = isMoving ? (isRunning ? 'run' : 'walk') : 'idle';
+
+        Object.keys(localBaseActions).forEach(key => {
+            const action = localBaseActions[key];
+            if (action) {
+                const target = (key === desiredAction) ? 1 : 0;
+                action.setEffectiveWeight(THREE.MathUtils.lerp(action.getEffectiveWeight(), target, delta * 10));
+            }
+        });
+
+        if (isMoving) {
+            const camAngle = Math.atan2(camera.position.x - localModel.position.x, camera.position.z - localModel.position.z);
+            let offset = 0;
+            if (keys.w) {
+                if (keys.a) offset = Math.PI / 4; else if (keys.d) offset = -Math.PI / 4;
+            } else if (keys.s) {
+                if (keys.a) offset = Math.PI * 0.75; else if (keys.d) offset = -Math.PI * 0.75; else offset = Math.PI;
+            } else if (keys.a) offset = Math.PI / 2; else if (keys.d) offset = -Math.PI / 2;
+
+            rotateQuaternion.setFromAxisAngle(new THREE.Vector3(0, 1, 0), camAngle + offset + Math.PI);
+            localModel.quaternion.rotateTowards(rotateQuaternion, 0.2);
+
+            const speed = isRunning ? 5.5 : 2.4;
+            walkDirection.set(0, 0, 1).applyQuaternion(localModel.quaternion);
+            localModel.position.addScaledVector(walkDirection, speed * delta);
+        }
+
+        remotePlayersState.set(myId, {
+            pos: { x: localModel.position.x, y: localModel.position.y, z: localModel.position.z },
+            rot: { x: localModel.quaternion.x, y: localModel.quaternion.y, z: localModel.quaternion.z, w: localModel.quaternion.w },
+            anim: desiredAction
+        });
+
+        cameraTarget.set(localModel.position.x, localModel.position.y + 1.6, localModel.position.z);
+        controls.target.lerp(cameraTarget, 0.1);
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        const delta = clock.getDelta();
+        if (localMixer) localMixer.update(delta);
+        remotePlayersModels.forEach(p => p.mixer.update(delta));
+        updateLocalCharacter(delta);
+        controls.update();
+        renderer.render(scene, camera);
+    }
+</script>
+</body>
+</html>
