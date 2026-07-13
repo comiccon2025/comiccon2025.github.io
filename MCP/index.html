@@ -1,0 +1,540 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Scientific World</title>
+    <!-- Font Awesome 6 -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            min-height: 100vh;
+            background: #08111f;
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #fff;
+            overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        body::-webkit-scrollbar {
+            display: none;
+        }
+
+        header {
+            text-align: center;
+            padding: 30px 20px 20px;
+        }
+        header h1 {
+            font-size: 2.8rem;
+            font-weight: 300;
+            letter-spacing: 4px;
+            background: linear-gradient(135deg, #6ab0ff, #2f8cff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        header p { display: none; }
+
+        .section-title {
+            max-width: 1500px;
+            margin: 30px auto 10px;
+            padding: 0 24px;
+            font-size: 1.8rem;
+            font-weight: 300;
+            letter-spacing: 2px;
+            color: #8bbaff;
+            border-left: 4px solid #2f8cff;
+            padding-left: 16px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 28px;
+            padding: 24px;
+            max-width: 1500px;
+            margin: 0 auto;
+        }
+
+        .card {
+            background: #13243a;
+            border: 1px solid #2f5f9f;
+            border-radius: 20px;
+            overflow: hidden;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            display: flex;
+            flex-direction: column;
+            text-decoration: none;
+            color: inherit;
+            cursor: default;
+        }
+        .card:hover {
+            transform: translateY(-8px) scale(1.02);
+            box-shadow: 0 0 32px rgba(63, 169, 255, 0.3);
+            border-color: #3fa9ff;
+        }
+        a.card {
+            cursor: pointer;
+        }
+
+        .preview {
+            position: relative;
+            padding-top: 56.25%;
+            background: #0a1420;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+        .preview img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: filter 0.3s;
+        }
+        .card:hover .preview img {
+            filter: brightness(1.05) saturate(1.1);
+        }
+
+        .play-icon {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 4.5rem;
+            color: rgba(255, 255, 255, 0.85);
+            text-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            pointer-events: none;
+            transition: transform 0.3s, color 0.3s;
+        }
+        .card:hover .play-icon {
+            transform: translate(-50%, -50%) scale(1.12);
+            color: #fff;
+        }
+
+        .preview-icon {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            color: rgba(255, 255, 255, 0.85);
+            text-shadow: 0 0 40px rgba(0, 0, 0, 0.8);
+            background-size: cover;
+            background-position: center;
+            transition: transform 0.3s;
+        }
+        .card:hover .preview-icon {
+            transform: scale(1.05);
+        }
+
+        .info {
+            padding: 18px 20px 20px;
+            background: linear-gradient(180deg, rgba(19, 36, 58, 0.6), #0d1a2b);
+            border-top: 1px solid rgba(47, 95, 159, 0.3);
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+        .info h2 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            margin: 0 0 6px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .info h2 i {
+            color: #3fa9ff;
+            font-size: 1.2rem;
+            width: 1.8rem;
+            text-align: center;
+        }
+        .info p {
+            color: #cfe2ff;
+            font-size: 0.9rem;
+            line-height: 1.4;
+            margin: 0 0 12px;
+            flex: 1;
+        }
+        .info .btn {
+            display: inline-block;
+            background: #2f8cff;
+            color: #fff;
+            text-decoration: none;
+            padding: 8px 16px;
+            border-radius: 30px;
+            font-weight: 500;
+            font-size: 0.85rem;
+            text-align: center;
+            transition: background 0.2s;
+            align-self: flex-start;
+            border: none;
+            letter-spacing: 0.5px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .info .btn i { font-size: 0.9rem; }
+        .info .btn:hover { background: #4a9cff; }
+
+        @media (max-width: 700px) {
+            header h1 { font-size: 2rem; }
+            .grid { grid-template-columns: 1fr; padding: 16px; gap: 20px; }
+            .section-title { font-size: 1.4rem; padding-left: 12px; }
+            .play-icon { font-size: 3.5rem; }
+            .preview-icon { font-size: 2.8rem; }
+        }
+
+        .card {
+            opacity: 0;
+            animation: fadeUp 0.5s ease forwards;
+        }
+        .card:nth-child(1) { animation-delay: 0.05s; }
+        .card:nth-child(2) { animation-delay: 0.10s; }
+        .card:nth-child(3) { animation-delay: 0.15s; }
+        .card:nth-child(4) { animation-delay: 0.20s; }
+        .card:nth-child(5) { animation-delay: 0.25s; }
+        .card:nth-child(6) { animation-delay: 0.30s; }
+        .card:nth-child(7) { animation-delay: 0.35s; }
+        .card:nth-child(8) { animation-delay: 0.40s; }
+        .card:nth-child(9) { animation-delay: 0.45s; }
+        .card:nth-child(10) { animation-delay: 0.50s; }
+        .card:nth-child(11) { animation-delay: 0.55s; }
+        .card:nth-child(12) { animation-delay: 0.60s; }
+        .card:nth-child(13) { animation-delay: 0.65s; }
+        .card:nth-child(14) { animation-delay: 0.70s; }
+        .card:nth-child(15) { animation-delay: 0.75s; }
+        .card:nth-child(16) { animation-delay: 0.80s; }
+        .card:nth-child(17) { animation-delay: 0.85s; }
+        .card:nth-child(18) { animation-delay: 0.90s; }
+        .card:nth-child(19) { animation-delay: 0.95s; }
+        .card:nth-child(20) { animation-delay: 1.00s; }
+        @keyframes fadeUp {
+            0% { opacity: 0; transform: translateY(30px); }
+            100% { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1><i class="fas fa-globe" style="color:#2f8cff; -webkit-text-fill-color:initial;"></i> qFoldIT — AI World Compiler</h1>
+</header>
+
+<!-- ===== СЕКЦИЯ: ИНТЕГРАЦИЯ qFoldIT С ИИ-МОДЕЛЯМИ ===== -->
+<div class="section-title"><i class="fas fa-robot" style="margin-right:12px; color:#3fa9ff;"></i>Интеграция qFoldIT с ИИ-моделями</div>
+<div class="grid">
+
+    <div class="card">
+        <div class="preview" style="background: #1a2a3f;">
+            <div class="preview-icon" style="color: #6ab0ff;"><i class="fas fa-dna"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-dna"></i> GPT‑Rosalind</h2>
+            <p>Специализированная модель для глубоких рассуждений в науках о жизни. Генерирует гипотезы, анализирует структуры и предлагает сценарии экспериментов. qFoldIT визуализирует эти сценарии в 3D.</p>
+            <a href="https://openai.com/gpt-rosalind/" target="_blank" class="btn"><i class="fas fa-external-link-alt"></i> Официальный сайт</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="preview" style="background: #1c1c2a;">
+            <div class="preview-icon" style="color: #fff;"><i class="fas fa-brain"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-brain"></i> Claude Science</h2>
+            <p>Рабочая среда с интеграцией 60+ научных баз данных. Через MCP отправляет запросы в qFoldIT, автоматизируя многоэтапные вычислительные исследования и предоставляя аудируемые результаты.</p>
+            <a href="https://claude.com/product/claude-science" target="_blank" class="btn"><i class="fas fa-external-link-alt"></i> Официальный сайт</a>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="preview" style="background: #0d1f2e;">
+            <div class="preview-icon" style="color: #8fcbff;"><i class="fas fa-atom"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-atom"></i> Gemini for Science</h2>
+            <p>Экосистема для полного цикла исследования: от генерации гипотез до анализа литературы. qFoldIT визуализирует выигрышные гипотезы, делая их наглядными для междисциплинарных команд.</p>
+            <a href="https://ai.google/gemini-for-science/" target="_blank" class="btn"><i class="fas fa-external-link-alt"></i> Официальный сайт</a>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== ARCHITECTURE LAYER ===== -->
+<div class="section-title"><i class="fas fa-sitemap" style="margin-right:12px; color:#3fa9ff;"></i>Architecture</div>
+<div class="grid">
+
+    <div class="card">
+        <div class="preview" style="background: #1a2a3f;">
+            <div class="preview-icon" style="color: #6ab0ff;"><i class="fas fa-dna"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-dna"></i> Scientific World Schema</h2>
+            <p>World DNA — универсальный язык описания миров. Объекты, связи, физика, логика.</p>
+            <span class="btn"><i class="fas fa-code"></i> Schema</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="preview" style="background: #1c1c2a;">
+            <div class="preview-icon" style="color: #fff;"><i class="fas fa-brain"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-brain"></i> Autonomous World Architect</h2>
+            <p>AI-архитектор. Читает схему, распределяет задачи по движкам через MCP.</p>
+            <span class="btn"><i class="fas fa-robot"></i> AI Core</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="preview" style="background: #0d1f2e;">
+            <div class="preview-icon" style="color: #8fcbff;"><i class="fas fa-plug"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-plug"></i> MCP Orchestration Layer</h2>
+            <p>Нервная система. Управление движками через Model Context Protocol.</p>
+            <span class="btn"><i class="fas fa-network-wired"></i> MCP</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="preview" style="background: #76B900;">
+            <div class="preview-icon" style="color: #fff;"><i class="fas fa-cubes"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-cubes"></i> NVIDIA Omniverse</h2>
+            <p>Reality Assembly Platform. OpenUSD, CAD, GIS, IoT, синхронизация цифровых двойников.</p>
+            <span class="btn"><i class="fas fa-cube"></i> Digital Twin</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="preview" style="background: #1a3a4a;">
+            <div class="preview-icon" style="color: #6fcbff;"><i class="fas fa-earth-europe"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-earth-europe"></i> UNIGINE SIM</h2>
+            <p>Planetary &amp; Engineering Simulation. Климат, океаны, ландшафты, инженерные системы.</p>
+            <span class="btn"><i class="fas fa-microchip"></i> Sim</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="preview" style="background: #1c1c2a;">
+            <div class="preview-icon" style="color: #fff;"><i class="fas fa-gamepad"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-gamepad"></i> Unreal Engine</h2>
+            <p>Cinematic AAA Layer. Фотореалистичная визуализация, кино, виртуальное производство.</p>
+            <span class="btn"><i class="fas fa-film"></i> AAA</span>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="preview" style="background: #222c37;">
+            <div class="preview-icon" style="color: #fff;"><i class="fas fa-cube"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-cube"></i> Unity</h2>
+            <p>Interactive Experience Layer. Массовые игры, обучение, AR/VR, мобильные платформы.</p>
+            <span class="btn"><i class="fas fa-mobile-screen-button"></i> Interactive</span>
+        </div>
+    </div>
+
+</div>
+
+<!-- ===== СТАРТОВЫЕ ЛОКАЦИИ ===== -->
+<div class="section-title"><i class="fas fa-compass" style="margin-right:12px; color:#3fa9ff;"></i>Стартовые локации</div>
+<div class="grid">
+    <a href="https://youtu.be/ZPxfHGbVwj8" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/ZPxfHGbVwj8/maxresdefault.jpg" alt="Космос" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-rocket"></i> Космос</h2>
+            <p>Планеты, станции и исследования дальнего космоса.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://youtu.be/XOdNBi3W-Fo" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/XOdNBi3W-Fo/maxresdefault.jpg" alt="Арктическая Станция" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-snowflake"></i> Арктическая Станция</h2>
+            <p>Полярные станции и климат.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://youtu.be/XygK9ivksW4" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/XygK9ivksW4/maxresdefault.jpg" alt="Арктическая Станция 3" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-flag"></i> Арктическая Станция 2</h2>
+            <p>Исследовательская станция в Арктике.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://vimeo.com/347661781" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://comiccon2025.github.io/img/snowflake/station_1.jpg" alt="Арктическая станция 2" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-flag"></i> Арктическая станция 3</h2>
+            <p>Исследовательская станция в Арктике.</p>
+            <span class="btn"><i class="fab fa-vimeo-v"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://youtu.be/2LBFW0LF9ZA" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/2LBFW0LF9ZA/maxresdefault.jpg" alt="Пляж" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-umbrella-beach"></i> Пляж</h2>
+            <p>Побережье, океанография и морская биология.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://youtu.be/JA6qUzjLdNw" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/JA6qUzjLdNw/maxresdefault.jpg" alt="Нефтяная платформа" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-oil-well"></i> Нефтяная платформа</h2>
+            <p>Морская инженерия и энергетика.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://youtu.be/XWeL15WWi5U" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://comiccon2025.github.io/img/snowflake/virus_lab.jpg" alt="Virus Labory" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-flask"></i> Virus Labory</h2>
+            <p>Научные эксперименты и исследования.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://youtu.be/ACS3jFbHymI" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/ACS3jFbHymI/maxresdefault.jpg" alt="Biotech Laboratory" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-dna"></i> Biotech Laboratory</h2>
+            <p>Новые биотехнологические исследования.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://youtu.be/exv4KRC7BII" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/exv4KRC7BII/maxresdefault.jpg" alt="Botanic Labory" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-ship"></i> Botanic Labory</h2>
+            <p>Сельскохозяйственные Биотехнологии.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+</div>
+
+<!-- ===== MCP INTEGRATIONS (видео) ===== -->
+<div class="section-title"><i class="fas fa-plug" style="margin-right:12px; color:#3fa9ff;"></i>MCP Integrations</div>
+<div class="grid">
+    <a href="https://youtu.be/C3T4u_yt_zg" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/C3T4u_yt_zg/maxresdefault.jpg" alt="MCP + Unigine" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-robot"></i> UNIGINE MCPBridge</h2>
+            <p>MCP-сервер внутри UNIGINE Editor. Управление редактором через AI.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://youtu.be/AlV__BFg8qk" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/AlV__BFg8qk/maxresdefault.jpg" alt="MCP + Unreal" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-gamepad"></i> Unreal MCP</h2>
+            <p>Официальный плагин Epic Games. Управление Unreal Editor через MCP.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://youtu.be/2sswkdV1y3c" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/2sswkdV1y3c/maxresdefault.jpg" alt="MCP + Unity" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-cube"></i> Unity MCP</h2>
+            <p>Официальный MCP-сервер от Unity (AI Assistant). Управление сценой.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://youtu.be/jqPzY43f1po" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/jqPzY43f1po/maxresdefault.jpg" alt="NVIDIA Omniverse MCP" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-cubes"></i> NVIDIA Omniverse MCP</h2>
+            <p>Официальные MCP-серверы NVIDIA для USD, Kit, OmniUI.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+</div>
+
+<!-- ===== INSTRUCTIONS ===== -->
+<div class="section-title"><i class="fas fa-film" style="margin-right:12px; color:#3fa9ff;"></i>Instructions</div>
+<div class="grid">
+    <a href="https://youtu.be/c5u3wJ9KBB0" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/c5u3wJ9KBB0/maxresdefault.jpg" alt="Real-World Digital Twins" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-snowflake"></i> Real-World Digital Twins</h2>
+                            <p>Доклад с Unreal Fest Seattle 2024 о создании иммерсивных цифровых двойников реальных объектов. Рассматриваются инструменты Unreal Engine, Twinmotion и Cesium для интеграции геопространственных данных, фотограмметрии и интерактивных визуализаций в проектах AEC (архитектура, инженерия, строительство).</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+    <a href="https://youtu.be/XliX7KaAA9g" target="_blank" class="card">
+        <div class="preview">
+            <img src="https://img.youtube.com/vi/XliX7KaAA9g/maxresdefault.jpg" alt="Making Digital Twins Playable" loading="lazy">
+            <div class="play-icon"><i class="fas fa-play-circle"></i></div>
+        </div>
+        <div class="info">
+            <h2><i class="fas fa-mountain"></i> Making Digital Twins Playable</h2>
+            <p>Доклад с Unreal Fest Stockholm 2025 о превращении статичных цифровых двойников в интерактивные песочницы. На примере города Норрчёпинг показан перенос данных из Cesium, 3D Tiles и OpenStreetMap в Fortnite (UEFN) и Unreal Engine. Сравниваются фотограмметрия и 3D Gaussian splatting, обсуждается применение генеративного ИИ для генерации уровней.</p>
+            <span class="btn"><i class="fab fa-youtube"></i> Смотреть</span>
+        </div>
+    </a>
+</div>
+
+</body>
+</html>
